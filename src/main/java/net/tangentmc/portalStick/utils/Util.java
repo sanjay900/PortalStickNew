@@ -134,10 +134,10 @@ public class Util {
 	}		
 
 	public static void clear(Block hatchMiddle, boolean powered, CubeType type, Block sign, Cube cb) {
-		clear(hatchMiddle, powered, type, sign, false, cb);
+		clesar(hatchMiddle, powered, type, sign, false, cb);
 	}
 	static Function<World,List<Cube>> getCubes = w-> w.getEntities().stream().filter(en -> en.hasMetadata("cuben")).map(en -> (Cube)en.getMetadata("cuben")).collect(Collectors.toList());
-	public static void clear(Block hatchMiddle, boolean powered, CubeType type, Block sign, boolean first, Cube en) {
+	public static void clesar(Block hatchMiddle, boolean powered, CubeType type, Block sign, boolean first, Cube en) {
 		PortalStick plugin = PortalStick.getInstance();
 		V10Block loc = new V10Block(hatchMiddle);
 		List<Cube> cubes = getCubes.apply(loc.getHandle().getWorld());

@@ -9,6 +9,10 @@
 			  <url>https://maven.tangentmc.net/repository/tangent/</url>
 			  <id>tangentmc</id>
 		  </repository>
+	  <repository>
+		  <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+		  <id>Sonatype Snapshots</id>
+	  </repository>
 		<repository>
 			<id>shadowvault-releases</id>
 			<name>Comphenix Maven Releases</name>
@@ -35,8 +39,13 @@
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot</artifactId>
 			<scope>provided</scope>
-			<version>1.9.4-R0.1-SNAPSHOT</version>
+			<version>1.10-R0.1-SNAPSHOT</version>
 		</dependency>
+        <dependency>
+            <groupId>org.joml</groupId>
+            <artifactId>joml</artifactId>
+            <version>1.8.1-SNAPSHOT</version>
+        </dependency>
 		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>

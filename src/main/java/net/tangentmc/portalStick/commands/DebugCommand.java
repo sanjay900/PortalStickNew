@@ -1,32 +1,44 @@
 package net.tangentmc.portalStick.commands;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketContainer;
+import net.tangentmc.nmsUtils.utils.Utils;
+import org.bukkit.entity.Boat;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Player;
 
-import net.tangentmc.nmsUtils.utils.Utils;
+import java.lang.reflect.InvocationTargetException;
 
-public class DebugCommand extends BaseCommand
-{
-	public DebugCommand()
-	{
-		super("language", 1, "<- toggles debugging", false);
-	}
+public class DebugCommand extends BaseCommand {
+    public DebugCommand() {
+        super("debug", 1, "<- toggles debugging", false);
+    }
 
-	public boolean execute()
-	{
-		if (player != null && player.isOp()) {
-			Fireball fireball = (Fireball) player.getWorld().spawnEntity(player.getLocation().add(player.getLocation().getDirection()), EntityType.FIREBALL);
-			fireball.setVelocity(player.getLocation().getDirection());
-		}
+    public boolean execute() {
+        if (player != null && player.isOp()) {
+            Boat b = (Boat) player.getWorld().spawnEntity(player.getLocation(), EntityType.BOAT);
 
-		plugin.getConfiguration().debug = !plugin.getConfiguration().debug;
-		Utils.sendMessage(sender, plugin.getI18n().getString(plugin.getConfiguration().debug ? "DebuggingEnabled" : "DebuggingDisabled", playerName));
-		plugin.getConfiguration().saveAll();
-		return true;
-	}
+            player.setPassenger(b);
+            if (argLength > 2) {
+                PacketContainer pc = ProtocolLibrary.getProtocolManager().createPacket(PacketType.Play.Server.MOUNT);
+                pc.getIntegers().write(0, player.getEntityId());
+                pc.getIntegerArrays().write(0, new int[]{b.getEntityId()});
+                try {
+                    ProtocolLibrary.getProtocolManager().sendServerPacket(player, pc);
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 
-	public boolean permission(Player player) {
-		return plugin.hasPermission(player, plugin.PERM_DEBUG);
-	}
+        plugin.getConfiguration().debug = !plugin.getConfiguration().debug;
+        Utils.sendMessage(sender, plugin.getI18n().getString(plugin.getConfiguration().debug ? "DebuggingEnabled" : "DebuggingDisabled", playerName));
+        plugin.getConfiguration().saveAll();
+        return true;
+    }
+
+    public boolean permission(Player player) {
+        return plugin.hasPermission(player, plugin.PERM_DEBUG);
+    }
 }

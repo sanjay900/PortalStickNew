@@ -6,19 +6,21 @@ import org.bukkit.entity.Player;
 import net.tangentmc.nmsUtils.utils.Utils;
 import net.tangentmc.portalStick.PortalStick;
 
+import java.lang.reflect.InvocationTargetException;
+
 public abstract class BaseCommand {
 	protected final PortalStick plugin = PortalStick.getInstance();
 	
 	public final String name;
-	protected final int argLength;
-	protected final String usage;
-	protected final boolean bePlayer;
+	final int argLength;
+	final String usage;
+	final boolean bePlayer;
 	
 	protected CommandSender sender;
-	protected String[] args;
+	String[] args;
 	protected Player player;
 	protected String playerName;
-	protected String usedCommand;
+	String usedCommand;
 	
 	public BaseCommand(String name, int argLength, String usage, boolean bePlayer)
 	{
@@ -39,8 +41,7 @@ public abstract class BaseCommand {
 		}
 		
 		args = new String[nl];
-		for(int i = 0; i < nl; i++)
-			args[i] = preArgs[i + 1];
+		System.arraycopy(preArgs, 1, args, 0, nl);
 		
 		if(!(sender instanceof Player))
 		{
@@ -70,7 +71,7 @@ public abstract class BaseCommand {
 	public abstract boolean execute();
 	public abstract boolean permission(Player player);
 	
-	public void sendUsage() {
+	void sendUsage() {
 		Utils.sendMessage(sender, "&c/"+usedCommand+" " + name + " " + usage);
 	}
 	

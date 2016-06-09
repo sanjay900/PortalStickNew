@@ -3,6 +3,7 @@ package net.tangentmc.portalStick.components;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.tangentmc.portalStick.PortalStick;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Block;

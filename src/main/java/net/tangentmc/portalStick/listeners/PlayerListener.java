@@ -57,6 +57,8 @@ import net.tangentmc.portalStick.utils.VectorUtil;
 public class PlayerListener implements Listener{
 	public PlayerListener() {
 		Bukkit.getPluginManager().registerEvents(this, PortalStick.getInstance());
+        interactBlocks.add(Material.WALL_SIGN);
+        interactBlocks.add(Material.AIR);
 	}
 	@EventHandler
 	public void regionChange(PlayerMoveEvent evt) {
@@ -72,6 +74,7 @@ public class PlayerListener implements Listener{
 
 		}
 	}
+    HashSet<Material> interactBlocks = new HashSet<>();
 	@EventHandler
 	public void use(PlayerPushedKeyEvent event) {
 		if (event.getButtons().contains(Key.DROP_ITEM)) {
@@ -90,13 +93,13 @@ public class PlayerListener implements Listener{
 					c.hold(event.getPlayer());
 					event.setCancelled(true);
 				} else {
-					Block target= event.getPlayer().getTargetBlock(new HashSet<>(Arrays.asList(Material.AIR, Material.WALL_SIGN)), 3);
+					Block target= event.getPlayer().getTargetBlock(interactBlocks, 3);
 					if (target!= null) {
 						switch (target.getType()) {
 							case STONE_BUTTON:
 							case WOOD_BUTTON:
 								Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(), ()->
-										this.setState(target),10l);
+										this.setState(target),10L);
 							case LEVER:
 								Bukkit.getScheduler().runTask(PortalStick.getInstance(), ()->
 										this.setState(target));
@@ -202,8 +205,7 @@ public class PlayerListener implements Listener{
 					p = (Portal) en.getMetadata("portalobj2").get(0).value();
 				}
 				if (p != null && (p.getOwner().equals(evt.getPlayer().getName()) || PortalStick.getInstance().hasPermission(evt.getPlayer(), PortalStick.PERM_DELETE_ALL))) {
-					final Portal p2 = p;
-					Bukkit.getScheduler().runTask(PortalStick.getInstance(), ()->p2.delete());
+                    Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),p::delete,1L);
 				}
 				Wire w = Util.getInstance(Wire.class, en);
 				if (w != null) {

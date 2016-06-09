@@ -1,13 +1,13 @@
 <component name="libraryTable">
   <library name="Maven: net.tangentmc:NMSUtils-API:2.0.2-SNAPSHOT">
     <CLASSES>
-      <root url="jar://$MAVEN_REPOSITORY$/net/tangentmc/NMSUtils-API/2.0.2-SNAPSHOT/NMSUtils-API-2.0.2-SNAPSHOT.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/net/tangentmc/NMSUtils-API/2.0.2-SNAPSHOT/NMSUtils-API-2.0.2-20160609.035725-2.jar!/" />
     </CLASSES>
     <JAVADOC>
-      <root url="jar://$MAVEN_REPOSITORY$/net/tangentmc/NMSUtils-API/2.0.2-SNAPSHOT/NMSUtils-API-2.0.2-SNAPSHOT-javadoc.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/net/tangentmc/NMSUtils-API/2.0.2-SNAPSHOT/NMSUtils-API-2.0.2-20160609.035725-2-javadoc.jar!/" />
     </JAVADOC>
     <SOURCES>
-      <root url="jar://$MAVEN_REPOSITORY$/net/tangentmc/NMSUtils-API/2.0.2-SNAPSHOT/NMSUtils-API-2.0.2-SNAPSHOT-sources.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/net/tangentmc/NMSUtils-API/2.0.2-SNAPSHOT/NMSUtils-API-2.0.2-20160609.035725-2-sources.jar!/" />
     </SOURCES>
   </library>
 </component>
