@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
+import net.tangentmc.portalStick.utils.MetadataSaver;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -21,12 +22,12 @@ import net.tangentmc.nmsUtils.entities.NMSArmorStand;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.MetadataSaver.Metadata;
+import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.utils.BlockStorage;
 import net.tangentmc.portalStick.utils.Util;
 @NoArgsConstructor
 @Metadata(metadataName = "gelTubeobj")
-public class GelTube extends BukkitRunnable implements MetadataSaver{
+public class GelTube extends BukkitRunnable implements MetadataSaver {
 	Block dispBlock;
 	BlockFace direction;
 	ItemStack stack;
@@ -93,11 +94,8 @@ public class GelTube extends BukkitRunnable implements MetadataSaver{
 			run = false;
 			return;
 		}
-        //-3? Armorstands have a bit of an offset that you need to account for
-		ArmorStand as = (ArmorStand) dispBlock.getWorld().spawnEntity(dispBlock.getLocation().add(FaceUtil.faceToVector(direction).add(new Vector(0.5,-3,0.5))), EntityType.ARMOR_STAND);
+		ArmorStand as = (ArmorStand) dispBlock.getWorld().spawnEntity(dispBlock.getLocation().add(FaceUtil.faceToVector(direction).add(new Vector(0.5,0,0.5))), EntityType.ARMOR_STAND);
 		NMSArmorStand.wrap(as).setWillSave(false);
-		//NMSArmorStand.wrap(as).lock();
-
 		if (direction == BlockFace.DOWN)
 			as.setVelocity(new Vector(0,-0.00000000001,0));
 		else

@@ -2,22 +2,18 @@ package net.tangentmc.portalStick.utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.FallingBlock;
-import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Attachable;
@@ -32,9 +28,6 @@ import net.tangentmc.nmsUtils.utils.Utils;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.nmsUtils.utils.VelocityUtil;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.Cube;
-import net.tangentmc.portalStick.components.Cube.CubeType;
-import net.tangentmc.portalStick.components.MetadataSaver;
 import net.tangentmc.portalStick.utils.Config.Sound;
 
 public class Util {
@@ -131,40 +124,6 @@ public class Util {
 		ItemStack gun = new ItemStack(Material.BLAZE_ROD, 1);
 		Utils.setItemNameAndDesc(gun, plugin.getConfiguration().gravityGunName, plugin.getConfiguration().gravityGunDesc);
 		return gun;
-	}		
-
-	public static void clear(Block hatchMiddle, boolean powered, CubeType type, Block sign, Cube cb) {
-		clesar(hatchMiddle, powered, type, sign, false, cb);
-	}
-	static Function<World,List<Cube>> getCubes = w-> w.getEntities().stream().filter(en -> en.hasMetadata("cuben")).map(en -> (Cube)en.getMetadata("cuben")).collect(Collectors.toList());
-	public static void clesar(Block hatchMiddle, boolean powered, CubeType type, Block sign, boolean first, Cube en) {
-		PortalStick plugin = PortalStick.getInstance();
-		V10Block loc = new V10Block(hatchMiddle);
-		List<Cube> cubes = getCubes.apply(loc.getHandle().getWorld());
-		cubes = cubes.stream().filter(c -> c.getSpawner() == loc).collect(Collectors.toList());
-		if (en == null) {
-			if (!cubes.isEmpty()) {
-				en = cubes.get(0);
-			}
-		}
-		if (en != null) {
-			if(plugin.getButtonManager().buttonsToEntity.containsKey(en.getAs().getUniqueId())) {
-				V10Block vloc = plugin.getButtonManager().buttonsToEntity.get(en.getAs().getUniqueId());
-				plugin.getButtonManager().buttonsToEntity.remove(en.getAs().getUniqueId());
-				if(!plugin.getButtonManager().buttonsToEntity.containsValue(vloc)) {
-					plugin.getButtonManager().changeBtn(vloc, false);
-				}
-			}
-			en.remove();
-		}
-		cubes.forEach(Cube::remove);
-
-		if (powered) {
-			Sign s = (Sign) sign.getState();
-			if ((!s.getLine(2).equals("norespawn")||first)) {
-				new Cube(type,hatchMiddle.getLocation().add(0.5,0,0.5),loc);
-			}
-		}
 	}
 	public static boolean setState(Block block) {
 		Block source = block.getRelative(((Attachable)block.getState().getData()).getAttachedFace());

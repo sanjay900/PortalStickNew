@@ -6,14 +6,15 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import net.tangentmc.nmsUtils.utils.BlockUtil;
+import net.tangentmc.portalStick.components.Cube;
+import net.tangentmc.portalStick.managers.CubeManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.BlockState;
+import org.bukkit.block.*;
 import org.bukkit.block.Dispenser;
-import org.bukkit.block.Dropper;
+import org.bukkit.block.Sign;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.EventHandler;
@@ -26,6 +27,7 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.material.*;
 import org.bukkit.util.EulerAngle;
 
 import net.tangentmc.nmsUtils.entities.NMSArmorStand;
@@ -85,40 +87,69 @@ public class BlockListener implements Listener{
 				g.close();
 				offGrills.add(g);
 			}
-		},1l);
+		}, 1L);
 		AutomatedPortal portal = Util.retrieveMetadata(evt.getBlock(), 4, AutomatedPortal.class);
-		if (portal == null) return;
-		Block wool = portal.getColor();
+		if (portal != null) {
+			Block wool = portal.getColor();
 
-		Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(), ()->{
-			if (FaceUtil.isVertical(portal.getFacing())) {
-				BlockFace face = BlockFace.WEST;
-				if (wool.getRelative(face).isBlockPowered()||wool.getRelative(face).isBlockIndirectlyPowered()) {
+			Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(), () -> {
+				if (FaceUtil.isVertical(portal.getFacing())) {
+					BlockFace face = BlockFace.WEST;
+					if (wool.getRelative(face).isBlockPowered() || wool.getRelative(face).isBlockIndirectlyPowered()) {
+						portal.open();
+					}
+					face = BlockFace.NORTH;
+					if (wool.getRelative(face).isBlockPowered() || wool.getRelative(face).isBlockIndirectlyPowered()) {
+						portal.open();
+					}
+					face = BlockFace.EAST;
+					if (wool.getRelative(face).isBlockPowered() || wool.getRelative(face).isBlockIndirectlyPowered()) {
+						portal.close();
+					}
+					face = BlockFace.SOUTH;
+					if (wool.getRelative(face).isBlockPowered() || wool.getRelative(face).isBlockIndirectlyPowered()) {
+						portal.close();
+					}
+					return;
+				}
+				BlockFace face = FaceUtil.rotate(portal.getFacing(), 2);
+				if (wool.getRelative(face).isBlockPowered() || wool.getRelative(face).isBlockIndirectlyPowered()) {
 					portal.open();
 				}
-				face = BlockFace.NORTH;
-				if (wool.getRelative(face).isBlockPowered()||wool.getRelative(face).isBlockIndirectlyPowered()) {
-					portal.open();
-				}
-				face = BlockFace.EAST;
-				if (wool.getRelative(face).isBlockPowered()||wool.getRelative(face).isBlockIndirectlyPowered()) {
+				face = FaceUtil.rotate(portal.getFacing(), -2);
+				if (wool.getRelative(face).isBlockPowered() || wool.getRelative(face).isBlockIndirectlyPowered()) {
 					portal.close();
 				}
-				face = BlockFace.SOUTH;
-				if (wool.getRelative(face).isBlockPowered()||wool.getRelative(face).isBlockIndirectlyPowered()) {
-					portal.close();
+			}, 1L);
+		}
+		// PortalStick signs
+		BlockUtil.getNearbyBlocks(evt.getBlock()
+				.getLocation(), 1).stream().filter(blk -> blk.getType() == Material.WALL_SIGN).forEach(blk -> {
+			Sign s = (Sign) blk.getState();
+			if (s.getLine(0).equalsIgnoreCase("[PortalStick]")) {
+				Cube.CubeType cubeType = Cube.CubeType.fromSign(s.getLine(1));
+				//  Cube sign
+				if (cubeType != null) {
+					Block attachedBlock = blk.getRelative(((org.bukkit.material.Sign) s
+							.getData()).getAttachedFace());
+
+					final V10Block hatchMiddleLoc = new V10Block(attachedBlock.getRelative(
+							BlockFace.DOWN, 2));
+					final V10Block loc2 = new V10Block(blk);
+
+					Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(), () -> {
+						Block blk1 = loc2.getHandle().getBlock();
+						if (blk1.isBlockPowered()
+								|| blk1.isBlockIndirectlyPowered()) {
+							Block next = blk1.getRelative(((org.bukkit.material.Sign) blk1
+									.getState().getData()).getFacing());
+							CubeManager.spawnCube(hatchMiddleLoc.getHandle().getBlock(), next.isBlockPowered() || next.isBlockIndirectlyPowered(), cubeType, blk, true);
+						}
+					}, 1L);
 				}
-				return;
 			}
-			BlockFace face = FaceUtil.rotate(portal.getFacing(), 2);
-			if (wool.getRelative(face).isBlockPowered()||wool.getRelative(face).isBlockIndirectlyPowered()) {
-				portal.open();
-			}
-			face = FaceUtil.rotate(portal.getFacing(), -2);
-			if (wool.getRelative(face).isBlockPowered()||wool.getRelative(face).isBlockIndirectlyPowered()) {
-				portal.close();
-			}
-		},1l);
+
+		});
 	}
 	@EventHandler
 	public void infiniteDispenser(BlockDispenseEvent event)
@@ -156,35 +187,20 @@ public class BlockListener implements Listener{
 			ItemStack gel = Utils.getItemData(region.getString(RegionSetting.RED_GEL_BLOCK));
 
 
+			if (mat != gel.getType() || is.getDurability() != gel.getDurability()) {
+				gel = Utils.getItemData(region.getString(RegionSetting.BLUE_GEL_BLOCK));
+
+			}
+			if (mat != gel.getType() || is.getDurability() != gel.getDurability()) {
+				gel = new ItemStack(Material.ICE);
+			}
 			if(mat == gel.getType() && is.getDurability() == gel.getDurability())
 			{
 				event.setCancelled(true);
 				Block to = bs.getBlock();
 				V10Block from = new V10Block(to);
-				plugin.getGelManager().createTube(from, ((org.bukkit.material.DirectionalContainer) bs.getData()).getFacing(), is);
+				plugin.getGelManager().createTube(from, ((DirectionalContainer) bs.getData()).getFacing(), is);
 				plugin.getConfiguration().saveAll();
-				return;
-			}
-			else
-			{
-				gel = Utils.getItemData(region.getString(RegionSetting.BLUE_GEL_BLOCK));
-				if(mat == gel.getType() && is.getDurability() == gel.getDurability())
-				{
-					event.setCancelled(true);
-					Block to = bs.getBlock();
-					V10Block from = new V10Block(to);
-					plugin.getGelManager().createTube(from, ((org.bukkit.material.DirectionalContainer) bs.getData()).getFacing(), is);
-					plugin.getConfiguration().saveAll();
-					return;
-				}
-			}
-			gel = new ItemStack(Material.ICE);
-			if(mat == gel.getType())
-			{
-				event.setCancelled(true);
-				Block to = bs.getBlock();
-				V10Block from = new V10Block(to);
-				plugin.getGelManager().createTube(from, ((org.bukkit.material.DirectionalContainer) bs.getData()).getFacing(), is);
 				return;
 			}
 		}
@@ -199,12 +215,12 @@ public class BlockListener implements Listener{
 		location.setDirection(FaceUtil.faceToVector(facing));
 		ArmorStand as = (ArmorStand) location.getWorld().spawnEntity(
 				location.add(0.5, -0.25, 0.5)
-				.add(FaceUtil.faceToVector(FaceUtil.rotate(facing,-2),0.2))
-				.add(FaceUtil.faceToVector(facing.getOppositeFace(),0.2))
+						.add(FaceUtil.faceToVector(FaceUtil.rotate(facing,-2),0.2))
+						.add(FaceUtil.faceToVector(facing.getOppositeFace(),0.2))
 				, EntityType.ARMOR_STAND);
 		NMSArmorStand.wrap(as).lock();
 		NMSArmorStand.wrap(as).setWillSave(false);
-        //Fix
+		//Fix
 		as.setRightArmPose(new EulerAngle(Math.toRadians(0),0,Math.toRadians(-5)));
 		as.setItemInHand(new ItemStack(Material.STICK));
 		as.setCustomName("portalstand");

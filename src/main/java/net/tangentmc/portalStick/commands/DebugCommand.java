@@ -16,6 +16,7 @@ public class DebugCommand extends BaseCommand {
     }
 
     public boolean execute() {
+        //TODO this should really stop being a test command
         if (player != null && player.isOp()) {
             Boat b = (Boat) player.getWorld().spawnEntity(player.getLocation(), EntityType.BOAT);
 

@@ -1,5 +1,6 @@
 package net.tangentmc.portalStick.components;
 
+import net.tangentmc.portalStick.utils.MetadataSaver;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -15,12 +16,12 @@ import net.tangentmc.nmsUtils.entities.NMSArmorStand;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.MetadataSaver.Metadata;
+import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 
 @NoArgsConstructor
 @Getter
 @Metadata(metadataName = "autoportalobj")
-public class AutomatedPortal implements MetadataSaver{
+public class AutomatedPortal implements MetadataSaver {
 	BlockFace facing;
 	ArmorStand autoStand;
 	Block loc;

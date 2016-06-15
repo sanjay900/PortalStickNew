@@ -19,8 +19,9 @@ import net.tangentmc.portalStick.utils.BlockStorage;
 import net.tangentmc.portalStick.utils.Util;
 
 @NoArgsConstructor
+//TODO: Boats have hit boxes. We should replace bridges with most of the code from funnel, and then use boats to make them solid
+//TODO: Merge funnel and bridge
 public class Bridge {
-	PortalStick plugin = PortalStick.getInstance();
 	BlockIterator it;
 	@Getter
 	Location start;
@@ -64,9 +65,7 @@ public class Bridge {
 		}
 		//Remove all unchanged
 		setBlocks.keySet().removeAll(tempSet.keySet());
-		for (BlockStorage b: setBlocks.values()) {
-			b.set();
-		}
+		setBlocks.values().forEach(BlockStorage::set);
 		setBlocks.clear();
 		setBlocks.putAll(tempSet);
 	}

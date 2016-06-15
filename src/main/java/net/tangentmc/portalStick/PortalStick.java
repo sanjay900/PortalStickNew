@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.stream.Collectors;
 
 import net.tangentmc.portalStick.commands.*;
+import net.tangentmc.portalStick.components.Laser;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -49,6 +50,9 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
 	private LaserManager laserManager;
 	private GelManager gelManager;
 	private GrillManager grillManager;
+	private PlayerListener playerListener;
+	private BlockListener blockListener;
+	private EntityListener entityListener;
 	private I18n i18n;
 	private FunnelBridgeManager bridgeManager;
 	private HashMap<String,PortalUser> users = new HashMap<>();
@@ -65,9 +69,9 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
 		gelManager = new GelManager();
 		wireManager.loadAllWire();
 		bridgeManager = new FunnelBridgeManager();
-		new PlayerListener();
-		new BlockListener();
-		new EntityListener();
+		playerListener = new PlayerListener();
+		blockListener = new BlockListener();
+		entityListener = new EntityListener();
 		configuration = new Config();
 		i18n = new I18n(getFile());
 		util = new Util();
@@ -114,6 +118,8 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
 		}
 		bridgeManager.disableAll();
 		gelManager.disableAll();
+		//Reset all recievers
+		laserManager.lasers.forEach(Laser::remove);
 	}
 	
 	public PortalUser getUser(String name) {

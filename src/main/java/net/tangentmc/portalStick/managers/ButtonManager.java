@@ -14,10 +14,10 @@ import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.Util;
-
+//TODO: spawn an entity when you trigger a button, then check if entities are colliding with it and disable.
+//TODO: the current button code is honestly extremely aids, we should redo it
 public class ButtonManager {
 	private PortalStick plugin = PortalStick.getInstance();
-    public final HashMap<UUID, V10Block> buttonsToEntity = new HashMap<UUID, V10Block>();
 
 	BlockFace[] blockfaces = new BlockFace[] { BlockFace.WEST,
 			BlockFace.NORTH_WEST, BlockFace.NORTH, BlockFace.NORTH_EAST,
@@ -27,7 +27,7 @@ public class ButtonManager {
 			BlockFace.NORTH, 
 			BlockFace.EAST, BlockFace.SOUTH};
 	public void disableAll() {
-		buttonsToEntity.values().forEach(b -> changeBtn(b, false));
+		/*buttonsToEntity.values().forEach(b -> changeBtn(b, false));*/
 	}
 	@SuppressWarnings("deprecation")
 	public Block chkBtn (Location l) {
@@ -66,7 +66,7 @@ public class ButtonManager {
 		middle.setTypeIdAndData(Material.WOOL.getId(), data, false);
 		for (BlockFace f : blockfacesn) {
 			Block block = under.getRelative(f,2);
-			Lever lever = null;
+			Lever lever;
 			BlockState state;
 			if (!block.getRelative(BlockFace.UP).getType().isSolid()) {
 				block = under.getRelative(f,1);

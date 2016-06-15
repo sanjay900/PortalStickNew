@@ -20,9 +20,6 @@ public class LaserManager {
 		s.remove();
 		plugin.getConfiguration().saveAll();
 	}
-	public void saveLaser(Laser laser, V10Block block) {
-		lasers.add(laser);
-	}
 	public void loadLaser(String blockloc) {
 		String[] locarr = blockloc.split(",");
 		String world = locarr[0];
@@ -38,8 +35,8 @@ public class LaserManager {
 		
 		BlockFace b = Util.getGlassPaneDirection(clickedBlock.getHandle().getBlock());
 		if (b == null) return false;
-		Laser s = new Laser(clickedBlock.getHandle().setDirection(FaceUtil.faceToVector(b)));
-		saveLaser(s, clickedBlock);
+		Laser s = new Laser(clickedBlock.getHandle().add(0.5,0.5,0.5).add(FaceUtil.faceToVector(b)).setDirection(FaceUtil.faceToVector(b)),clickedBlock.getHandle().getBlock());
+		lasers.add(s);
 		return true;
 	}
 }

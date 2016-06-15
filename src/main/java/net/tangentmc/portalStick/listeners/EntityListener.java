@@ -2,6 +2,7 @@ package net.tangentmc.portalStick.listeners;
 
 import net.tangentmc.nmsUtils.NMSUtil;
 import net.tangentmc.nmsUtils.NMSUtils;
+import net.tangentmc.portalStick.components.*;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -23,13 +24,7 @@ import net.tangentmc.nmsUtils.events.EntityMoveEvent;
 import net.tangentmc.nmsUtils.events.LaserCollideWithEntityEvent;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.AutomatedPortal;
-import net.tangentmc.portalStick.components.Cube;
 import net.tangentmc.portalStick.components.Cube.CubeType;
-import net.tangentmc.portalStick.components.Funnel;
-import net.tangentmc.portalStick.components.GelTube;
-import net.tangentmc.portalStick.components.Grill;
-import net.tangentmc.portalStick.components.Portal;
 import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.Util;
 
@@ -128,7 +123,9 @@ public class EntityListener implements Listener {
 		if (target.hasMetadata("cuben")) {
 			return true;
 		}
-
+		if (collider instanceof Laser && target instanceof LivingEntity) {
+			((LivingEntity) target).damage(2);
+		}
 		//Grills should NOT emacipate themselves
 		if (collider.getType() != EntityType.FALLING_BLOCK && collider.getType() != EntityType.COMPLEX_PART)
 			if (target.hasMetadata("grillen") && !isholo) {

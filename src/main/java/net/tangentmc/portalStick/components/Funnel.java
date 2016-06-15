@@ -2,6 +2,7 @@ package net.tangentmc.portalStick.components;
 
 import java.util.HashMap;
 
+import net.tangentmc.portalStick.utils.MetadataSaver;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -11,7 +12,6 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.BlockIterator;
@@ -24,13 +24,13 @@ import net.tangentmc.nmsUtils.entities.NMSEntity;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.MetadataSaver.Metadata;
+import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.utils.Util;
 
 @Getter
 @NoArgsConstructor
 @Metadata(metadataName = "funnelobj")
-public class Funnel extends Bridge implements MetadataSaver{
+public class Funnel extends Bridge implements MetadataSaver {
 	HashMap<V10Block,ArmorStand> setBlocks2;
 	Vector currentdir;
 	Vector newdir;
@@ -141,21 +141,17 @@ public class Funnel extends Bridge implements MetadataSaver{
 	@Override
 	public void remove() {
 		open = false;
-		for (ArmorStand holo: setBlocks2.values()) {
-			holo.remove();
-		}
+		setBlocks2.values().forEach(Entity::remove);
 		Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(), () -> {
-			for (Entity en: start.getWorld().getEntities()) {
-				if (en.hasMetadata("inFunnel") && en.getMetadata("inFunnel").get(0).value() == this) {
-					en.removeMetadata("inFunnel", PortalStick.getInstance());
-					if (en instanceof Player) {
-						((Player) en).setFlying(false);
-					} else {
-						((NMSEntity)en).setFrozen(false);
-					}
+			start.getWorld().getEntities().stream().filter(en -> en.hasMetadata("inFunnel") && en.getMetadata("inFunnel").get(0).value() == this).forEach(en -> {
+				en.removeMetadata("inFunnel", PortalStick.getInstance());
+				if (en instanceof Player) {
+					((Player) en).setFlying(false);
+				} else {
+					((NMSEntity) en).setFrozen(false);
 				}
-			}
-		},1l);
+			});
+		}, 1L);
 		this.setBlocks2.clear();
 	}
 	@Override

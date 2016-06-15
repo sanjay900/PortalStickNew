@@ -122,9 +122,8 @@ public class Config {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 		//Load main settings
-		DisabledWorlds = new HashSet<String>(getStringList("main.disabled-worlds", new ArrayList<String>()));
+		DisabledWorlds = new HashSet<>(getStringList("main.disabled-worlds", new ArrayList<>()));
 		String[] split = getString("main.portal-tool", "280:0").split(":");
 		PortalTool = Integer.parseInt(split[0]);
 		if(split.length > 1)
@@ -137,7 +136,7 @@ public class Config {
 		gravityGunDesc = ChatColor.translateAlternateColorCodes('&', getString("main.gravity-gun-description", "&aThanks to the ZPEFM,\n&2the impossible is easy."));
 		RegionTool = getInt("main.region-tool", 268);
 		RestoreInvOnWorldChange = getBoolean("main.restore-inventory-on-world-change", true);
-		ColorPresets = getStringList("main.portal-color-presets", Arrays.asList(new String[]{"9-1","3-10","4-14"}));
+		ColorPresets = getStringList("main.portal-color-presets", Arrays.asList("9-1","3-10","4-14"));
 		Iterator<String> iter = ColorPresets.iterator();
 		debug = getBoolean("Debug", true); //TODO: True cause beta.
 		newPortals = getBoolean("main.new-portals", true);
@@ -210,17 +209,13 @@ public class Config {
 		//			plugin.userManager.createUser(player);
 
 		//Load all regions
-		for (String regionName : regionConfig.getKeys(false))
-			if(!regionName.equals("global"))
-				plugin.getRegionManager().loadRegion(regionName, null, null);
+		regionConfig.getKeys(false).stream().filter(regionName -> !regionName.equals("global")).forEach(regionName -> plugin.getRegionManager().loadRegion(regionName, null, null));
 		plugin.getRegionManager().loadRegion("global", null, null);
 		if(debug)
 			plugin.getLogger().info((plugin.getRegionManager().regions.size()-1) + " (" + plugin.getRegionManager().regions.size() + ") region(s) loaded");
 
 		//Validate regions
-		for(Region region: plugin.getRegionManager().regions.values())
-			if(!region.validateRedGel() && debug)
-				plugin.getLogger().info("Inavlid red-gel-max-velocity for region \""+region.name+"\" - fixing!");
+		plugin.getRegionManager().regions.values().stream().filter(region -> !region.validateRedGel() && debug).forEach(region -> plugin.getLogger().info("Inavlid red-gel-max-velocity for region \"" + region.name + "\" - fixing!"));
 
 		//Load grills
 		for (String grill : (grillConfig.getStringList("grills")))
@@ -321,7 +316,7 @@ public class Config {
 		return file;
 	}
 	private FileConfiguration getConfig(File file) {
-		FileConfiguration config = null;
+		FileConfiguration config;
 		try {
 			config = new YamlConfiguration();
 			if (file.exists())
@@ -359,7 +354,7 @@ public class Config {
 
 		//Save grills
 		grillConfig.set("grills", null);
-		List<String> list = new ArrayList<String>();
+		List<String> list = new ArrayList<>();
 		for (Grill grill : plugin.getGrillManager().grills)
 			list.add(grill.getStringLocation());
 		grillConfig.set("grills", list);
@@ -375,7 +370,7 @@ public class Config {
 
 		//Save lasers
 		laserConfig.set("lasers", null);
-		list = new ArrayList<String>();
+		list = new ArrayList<>();
 		for (Laser laser : plugin.getLaserManager().lasers)
 			list.add(laser.getStringLocation());
 		laserConfig.set("lasers", list);
@@ -392,7 +387,7 @@ public class Config {
 
 		//Save bridges
 		bridgeConfig.set("bridges", null);
-		list = new ArrayList<String>();
+		list = new ArrayList<>();
 		for (Bridge bridge : plugin.getBridgeManager().getBridges())
 			list.add(bridge.getStringLocation());
 		bridgeConfig.set("bridges", list);
@@ -407,7 +402,7 @@ public class Config {
 		}
 		//Save gel
 		gelConfig.set("gelTubes", null);
-		list = new ArrayList<String>();
+		list = new ArrayList<>();
 		for (GelTube tube : plugin.getGelManager().getTubes())
 			list.add(tube.getStringLocation());
 		gelConfig.set("gelTubes", list);

@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import net.tangentmc.nmsUtils.utils.Utils;
+import net.tangentmc.portalStick.utils.MetadataSaver;
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Location;
@@ -29,7 +30,7 @@ import net.tangentmc.nmsUtils.utils.BlockUtil;
 import net.tangentmc.nmsUtils.utils.Cooldown;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.MetadataSaver.Metadata;
+import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.components.Wire.PoweredReason;
 import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.RegionSetting;
@@ -37,7 +38,7 @@ import net.tangentmc.portalStick.utils.Util;
 @Getter
 @NoArgsConstructor
 @Metadata(metadataName = "grillen")
-public class Grill implements MetadataSaver{
+public class Grill implements MetadataSaver {
 	public Grill(Block initial) {
 		init = new V10Block(initial);
 		complete = placeRecursiveEmancipationGrill(init);
@@ -59,8 +60,8 @@ public class Grill implements MetadataSaver{
 
 
 		//Attempt to get complete border
-		border = new HashSet<V10Block>();
-		inside = new HashSet<V10Block>();
+		border = new HashSet<>();
+		inside = new HashSet<>();
 		startRecurse(initial, borderID, BlockFace.WEST, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.DOWN, BlockFace.UP);
 		if (!complete)
 			startRecurse(initial, borderID, BlockFace.UP, BlockFace.WEST, BlockFace.EAST, BlockFace.DOWN, BlockFace.SOUTH, BlockFace.NORTH);
@@ -158,14 +159,14 @@ public class Grill implements MetadataSaver{
 	List<NMSHologram> grill = new ArrayList<>();
 	public void open() {
 		World w = inside.toArray(new V10Block[0])[0].getHandle().getWorld();
-		int height = rmax.getBlockY()-rmin.getBlockY();
-		height -=2;
+        //-1? An extra block is counted due to how you need to fill the inside, and the block count starts including the block under the grill
+		int height = rmax.getBlockY()-rmin.getBlockY()-1;
 		for (int x = rmin.getBlockX();x<=rmax.getBlockX();x++) {
 			for (int z = rmin.getBlockZ();z<=rmax.getBlockZ();z++) {
 				if (new Location(w,x+0.5,rmax.getY()-1,z+0.5).getBlock().getType() == Material.MOSSY_COBBLESTONE) continue;
 				HologramFactory factory = new HologramFactory().withLocation(new Location(w,x+0.5,rmax.getY(),z+0.5));
 				for (int y = 0; y <= height;y++) {
-					if (Utils.isSolid(w.getBlockAt(x,rmax.getBlockY()-y+1,z).getType())) continue;
+					if (Utils.isSolid(w.getBlockAt(x,rmax.getBlockY()-y,z).getType())) continue;
 					factory = factory.withBlock(new ItemStack(Material.WEB));
 				}
 				NMSHologram holo = factory.build();
@@ -204,13 +205,13 @@ public class Grill implements MetadataSaver{
 			InventoryHolder ih = (InventoryHolder)en;
 			Inventory inv = ih.getInventory();
 			boolean changed = false;
-			ItemStack[] inv2 = null;
+			ItemStack[] inv2;
 			boolean roe = region.getBoolean(RegionSetting.GRILL_ONE_EXCEPTION);
 
 			List<?> ice = region.getList(RegionSetting.GRILL_REMOVE_EXCEPTIONS);
 			HashSet<Integer> rm;
 			if(roe)
-				rm = new HashSet<Integer>();
+				rm = new HashSet<>();
 			else
 				rm = null;
 			ItemStack newSlot;

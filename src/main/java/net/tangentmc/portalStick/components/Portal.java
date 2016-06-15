@@ -14,7 +14,8 @@ import net.tangentmc.nmsUtils.entities.NMSHologram;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.MetadataSaver.Metadata;
+import net.tangentmc.portalStick.utils.MetadataSaver;
+import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.utils.BlockStorage;
 import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.Util;
@@ -40,11 +41,12 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 @Metadata(metadataName = "portalobj")
+//TODO: Code back in angled portals
 public class Portal implements MetadataSaver {
     private Vector facing;
     private String owner;
     private NMSHologram back;
-    private ArmorStand portal;
+    public ArmorStand portal;
     boolean finished = false;
     boolean open = false;
     Block bottom = null;
@@ -295,7 +297,7 @@ public class Portal implements MetadataSaver {
         }
         TeleportLoc loc = teleportEntity(eloc, motion);
         if (loc == null) return;
-        if (!(entity instanceof Player)) {
+        if (!(entity instanceof Player) && !(entity instanceof Laser)) {
             NMSUtils.getInstance().getUtil().teleportFast(entity, loc.destination, loc.getVelocity());
         } else {
             entity.teleport(loc.destination);

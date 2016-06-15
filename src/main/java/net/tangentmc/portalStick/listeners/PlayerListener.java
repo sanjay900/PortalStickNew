@@ -57,8 +57,8 @@ import net.tangentmc.portalStick.utils.VectorUtil;
 public class PlayerListener implements Listener{
 	public PlayerListener() {
 		Bukkit.getPluginManager().registerEvents(this, PortalStick.getInstance());
-        interactBlocks.add(Material.WALL_SIGN);
-        interactBlocks.add(Material.AIR);
+		interactBlocks.add(Material.WALL_SIGN);
+		interactBlocks.add(Material.AIR);
 	}
 	@EventHandler
 	public void regionChange(PlayerMoveEvent evt) {
@@ -74,7 +74,7 @@ public class PlayerListener implements Listener{
 
 		}
 	}
-    HashSet<Material> interactBlocks = new HashSet<>();
+	HashSet<Material> interactBlocks = new HashSet<>();
 	@EventHandler
 	public void use(PlayerPushedKeyEvent event) {
 		if (event.getButtons().contains(Key.DROP_ITEM)) {
@@ -205,7 +205,7 @@ public class PlayerListener implements Listener{
 					p = (Portal) en.getMetadata("portalobj2").get(0).value();
 				}
 				if (p != null && (p.getOwner().equals(evt.getPlayer().getName()) || PortalStick.getInstance().hasPermission(evt.getPlayer(), PortalStick.PERM_DELETE_ALL))) {
-                    Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),p::delete,1L);
+					Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),p::delete,1L);
 				}
 				Wire w = Util.getInstance(Wire.class, en);
 				if (w != null) {
@@ -214,6 +214,11 @@ public class PlayerListener implements Listener{
 				Grill g = Util.getInstance(Grill.class, en);
 				if (g != null && PortalStick.getInstance().hasPermission(evt.getPlayer(), PortalStick.PERM_DELETE_GRILL))
 					g.remove();
+				Cube c = Util.getInstance(Cube.class,en);
+				if (c != null) {
+					c.hold(evt.getPlayer());
+				}
+
 			});
 		}
 	}
@@ -238,7 +243,7 @@ public class PlayerListener implements Listener{
 	@SuppressWarnings("deprecation")
 	@EventHandler
 	public void playerInteract(PlayerInteractEvent evt) {
-		HashSet<Material> transparent = new HashSet<Material>();
+		HashSet<Material> transparent = new HashSet<>();
 		transparent.add(Material.GLASS);
 		transparent.add(Material.AIR);
 		for (Material mt: Material.values()) {

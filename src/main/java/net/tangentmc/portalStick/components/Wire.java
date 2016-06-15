@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import net.tangentmc.portalStick.utils.MetadataSaver;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -25,12 +26,12 @@ import net.tangentmc.nmsUtils.entities.NMSArmorStand;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.MetadataSaver.Metadata;
+import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.Util;
 @NoArgsConstructor
 @Metadata(metadataName = "wireobj")
-public class Wire implements MetadataSaver{
+public class Wire implements MetadataSaver {
 	public ArmorStand stand;
 	public V10Block loc;
 	public boolean powered = false;

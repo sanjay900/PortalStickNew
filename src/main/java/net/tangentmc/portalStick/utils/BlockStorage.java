@@ -1,16 +1,17 @@
 package net.tangentmc.portalStick.utils;
 
+import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.inventory.ItemStack;
 
 import net.tangentmc.nmsUtils.utils.V10Block;
-
+@Setter
 public class BlockStorage {
 
-    private final int id;
-    private final V10Block location;
-    private final byte data;
+    private int id;
+    private V10Block location;
+    private byte data;
     
     @SuppressWarnings("deprecation")
 	public BlockStorage(Block block) {
