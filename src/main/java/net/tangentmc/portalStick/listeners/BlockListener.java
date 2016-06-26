@@ -7,8 +7,9 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import net.tangentmc.nmsUtils.utils.BlockUtil;
-import net.tangentmc.portalStick.components.Cube;
+import net.tangentmc.portalStick.components.*;
 import net.tangentmc.portalStick.managers.CubeManager;
+import net.tangentmc.portalStick.utils.GelType;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -35,9 +36,6 @@ import net.tangentmc.nmsUtils.utils.FaceUtil;
 import net.tangentmc.nmsUtils.utils.Utils;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.AutomatedPortal;
-import net.tangentmc.portalStick.components.Grill;
-import net.tangentmc.portalStick.components.Region;
 import net.tangentmc.portalStick.components.Wire.PoweredReason;
 import net.tangentmc.portalStick.utils.RegionSetting;
 import net.tangentmc.portalStick.utils.Util;
@@ -59,17 +57,20 @@ public class BlockListener implements Listener{
 	@EventHandler
 	public void onBlockBreak(BlockBreakEvent evt) {
 		PortalStick.getInstance().getBridgeManager().blockUpdate(evt.getBlock());
+        PortalStick.getInstance().getWireManager().blockBreak(evt.getBlock());
+        Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),()->
+                PortalStick.getInstance().getWireManager().blockUpdate(evt.getBlock()),1L);
 	}
 	@EventHandler
 	public void onBlockPlace(BlockPlaceEvent evt) {
 		PortalStick.getInstance().getBridgeManager().blockUpdate(evt.getBlock());
+        PortalStick.getInstance().getWireManager().blockUpdate(evt.getBlock());
 	}
 	ArrayList<Grill> offGrills = new ArrayList<>();
 	Predicate<V10Block> notPowered = b -> !b.getHandle().getBlock().isBlockPowered()&&!b.getHandle().getBlock().isBlockIndirectlyPowered();
 	Predicate<V10Block> isPowered = b -> b.getHandle().getBlock().isBlockPowered()||b.getHandle().getBlock().isBlockIndirectlyPowered();
 	@EventHandler
 	public void onRedstone(BlockRedstoneEvent evt) {
-		PortalStick.getInstance().getWireManager().powerBlock(evt.getBlock(),evt.getNewCurrent() > 0,PoweredReason.REDSTONE);
 		PortalStick.getInstance().getBridgeManager().powerBlock(evt.getBlock(),evt.getNewCurrent() > 0);
 		Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),() -> {
 			Grill g = Util.retrieveMetadata(evt.getBlock(), 3, Grill.class);
@@ -183,23 +184,12 @@ public class BlockListener implements Listener{
 		Region region = plugin.getRegionManager().getRegion(new V10Block(bs.getLocation()));
 		if(region.getBoolean(RegionSetting.GEL_TUBE))
 		{
-
-			ItemStack gel = Utils.getItemData(region.getString(RegionSetting.RED_GEL_BLOCK));
-
-
-			if (mat != gel.getType() || is.getDurability() != gel.getDurability()) {
-				gel = Utils.getItemData(region.getString(RegionSetting.BLUE_GEL_BLOCK));
-
-			}
-			if (mat != gel.getType() || is.getDurability() != gel.getDurability()) {
-				gel = new ItemStack(Material.ICE);
-			}
-			if(mat == gel.getType() && is.getDurability() == gel.getDurability())
+			if(GelType.fromDispenser(is) != null)
 			{
 				event.setCancelled(true);
 				Block to = bs.getBlock();
 				V10Block from = new V10Block(to);
-				plugin.getGelManager().createTube(from, ((DirectionalContainer) bs.getData()).getFacing(), is);
+				plugin.getGelManager().createTube(from, ((DirectionalContainer) bs.getData()).getFacing(), GelType.fromDispenser(is));
 				plugin.getConfiguration().saveAll();
 				return;
 			}

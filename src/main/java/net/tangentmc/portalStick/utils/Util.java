@@ -309,6 +309,10 @@ public class Util {
 	public static <T extends MetadataSaver> T getInstance(Class<T> clazz, Entity en) {
 		return MetadataSaver.get(en,clazz);
 	}
+	@SneakyThrows
+	public static <T extends MetadataSaver> T getInstance(String name, Entity en) {
+		return MetadataSaver.get(en,name);
+	}
 	public static boolean isTranslucent(Material mt) {
 		return mt.name().contains("GLASS") || !mt.isSolid() || mt.isTransparent();
 	}

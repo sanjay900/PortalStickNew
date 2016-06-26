@@ -10,7 +10,7 @@ import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.components.Grill;
 
 public class GrillManager {
-
+	//TODO: Grills arent removed on block break or load with incomplete frame or reload
 	public final Set<Grill> grills = new HashSet<Grill>();
 	private final PortalStick plugin = PortalStick.getInstance(); 
 

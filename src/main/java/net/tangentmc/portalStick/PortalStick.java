@@ -1,10 +1,10 @@
 package net.tangentmc.portalStick;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import net.tangentmc.portalStick.commands.*;
+import net.tangentmc.portalStick.components.Cube;
 import net.tangentmc.portalStick.components.Laser;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -112,9 +112,13 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
 	
 	public void onDisable() {
 		for (World w: Bukkit.getWorlds()) {
-			w.getEntities().stream().collect(Collectors.toList()).stream().filter(en -> Util.checkInstance(Portal.class, en)).forEach(en -> {
-				Util.getInstance(Portal.class, en).delete();
-			});
+            for (Entity en: w.getEntities()) {
+                Cube c = Util.getInstance(Cube.class, en);
+                Portal p = Util.getInstance(Portal.class, en);
+                if (p == null) p = Util.getInstance("portalobj2",en);
+                if (c != null) c.remove();
+                if (p != null) p.closePlugin();
+            }
 		}
 		bridgeManager.disableAll();
 		gelManager.disableAll();

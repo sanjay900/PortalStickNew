@@ -1,13 +1,16 @@
 package net.tangentmc.portalStick.components;
 
 import net.tangentmc.nmsUtils.utils.BlockUtil;
+import net.tangentmc.portalStick.utils.GelType;
 import net.tangentmc.portalStick.utils.MetadataSaver;
 import net.tangentmc.portalStick.utils.RegionSetting;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
@@ -25,73 +28,102 @@ import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 @NoArgsConstructor
 @Metadata(metadataName = "cuben")
 public class Cube implements MetadataSaver {
-	@AllArgsConstructor
-	public enum CubeType {
-		COMPANION(RegionSetting.COMPANION_CUBE_BLOCK,"ccube"),
-		NORMAL(RegionSetting.CUBE_BLOCK,"cube"),
-		LASER(RegionSetting.LASER_CUBE_BLOCK,"lcube");
-        RegionSetting setting;
-		String name;
-		public static CubeType fromSign(String signText) {
-			try {
-				return CubeType.valueOf(signText.toUpperCase());
-			} catch (Exception ex) {
-				for (CubeType c : values()) {
-					if (c.name.equalsIgnoreCase(signText)) return c;
-				}
-			}
-			return null;
-		}
-        public ItemStack getCube(V10Block cubeLocation) {
-            String bstr = PortalStick.getInstance().getRegionManager().getRegion(cubeLocation).getString(setting);
-            return BlockUtil.getStackFromString(bstr);
+    @AllArgsConstructor
+    public enum CubeType {
+        COMPANION(57,58,59,"ccube"),
+        NORMAL(54,55,56,"cube"),
+        LASER(60,61,62,"lcube");
+        int normal;
+        int speed;
+        int jump;
+        String name;
+        public static CubeType fromSign(String signText) {
+            try {
+                return CubeType.valueOf(signText.toUpperCase());
+            } catch (Exception ex) {
+                for (CubeType c : values()) {
+                    if (c.name.equalsIgnoreCase(signText)) return c;
+                }
+            }
+            return null;
         }
-	}
-	CubeType type;
-	Entity holder;
-	ArmorStand as;
-	V10Block spawner;
+        public static CubeType fromId(int id) {
+            for (CubeType c : values()) {
+                if (c.speed == id || c.normal == id|| c.jump == id) return c;
+            }
 
-	public Cube(CubeType type, Location loc, V10Block spawner) {
-		this.spawner = spawner;
-		this.type = type;
-		as = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
-		as.setHelmet(type.getCube(new V10Block(loc)));
-		NMSEntity.wrap(as).setWillSave(false);
+            return null;
+        }
+        public ItemStack getCube(GelType type) {
+            if (type == null) {
+                return new ItemStack(Material.DIAMOND_HOE,1,(short)normal);
+            }
+            switch (type) {
+                case SPEED:
+                    return new ItemStack(Material.DIAMOND_HOE,1,(short)speed);
+                case JUMP:
+                    return new ItemStack(Material.DIAMOND_HOE,1,(short)jump);
+            }
+            return new ItemStack(Material.DIAMOND_HOE,1,(short)normal);
+        }
+    }
+    GelType gelType;
+    CubeType type;
+    Player holder;
+    ArmorStand as;
+    V10Block spawner;
+
+    public Cube(CubeType type, Location loc, V10Block spawner) {
+        this.spawner = spawner;
+        this.type = type;
+        as = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
+        as.setHelmet(type.getCube(null));
+        NMSEntity.wrap(as).setWillSave(false);
         NMSEntity.wrap(as).setCollides(true);
-		as.setSmall(true);
-		as.setVisible(false);
-		NMSArmorStand.wrap(as).lock();
-		as.setMetadata("cuben", new FixedMetadataValue(PortalStick.getInstance(),this));
-	}
-	BukkitTask holdTask;
-	public void hold(Entity en) {
-		if (holdTask != null) {
-			holdTask.cancel();
+        as.setSmall(true);
+        as.setVisible(false);
+        as.setAI(false);
+        as.setSilent(true);
+        NMSArmorStand.wrap(as).lock();
+        as.setMetadata("cuben", new FixedMetadataValue(PortalStick.getInstance(),this));
+    }
+    public void setGelType(GelType type) {
+        if (type == GelType.CONVERSION) return;
+        if (type == GelType.WATER) type = null;
+        this.gelType = type;
+        as.setHelmet(this.type.getCube(type));
+    }
+    BukkitTask holdTask;
+    public void hold(Player en) {
+        if (holdTask != null) {
+            holdTask.cancel();
             holdTask = null;
-			boolean treturn = en == holder;
-			PortalStick.getInstance().getUser(holder.getName()).setCube(null);
-			holder = null;
-			as.setGravity(true);
-			if (treturn) return;
-		}
-		this.holder = en;
-		PortalStick.getInstance().getUser(holder.getName()).setCube(this);
-		as.setGravity(false);
-		//TODO Should we use packets to spam this faster than the server clock?
-		holdTask = Bukkit.getScheduler().runTaskTimer(PortalStick.getInstance(), ()->{
-			Location to = holder.getLocation().add(0, 1, 0).add(holder.getLocation().getDirection());
-			as.teleport(to);
-		}, 1L, 1L);
-	}
-	public void remove() {
-		as.remove();
-	}
-	public void respawn() {
-		if (holdTask != null) holdTask.cancel();
-		as.setGravity(true);
-		as.teleport(spawner.getHandle());
-	}
-	
+            boolean treturn = en == holder;
+            PortalStick.getInstance().getUser(holder.getName()).setCube(null);
+            holder = null;
+            if (treturn) {
+                as.setVelocity(en.getVelocity());
+                as.setGravity(true);
+                return;
+            }
+        }
+        this.holder = en;
+        PortalStick.getInstance().getUser(holder.getName()).setCube(this);
+        as.setGravity(false);
+        holdTask = Bukkit.getScheduler().runTaskTimer(PortalStick.getInstance(), ()->{
+
+            Location to = en.getLocation().add(0, 1, 0).add(holder.getLocation().getDirection());
+            as.teleport(to);
+        }, 1L, 1L);
+    }
+    public void remove() {
+        as.remove();
+    }
+    public void respawn() {
+        if (holdTask != null) holdTask.cancel();
+        as.setGravity(true);
+        as.teleport(spawner.getHandle());
+    }
+
 }
  

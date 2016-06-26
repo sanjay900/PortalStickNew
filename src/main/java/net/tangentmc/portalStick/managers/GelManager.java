@@ -3,6 +3,7 @@ package net.tangentmc.portalStick.managers;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.tangentmc.portalStick.utils.GelType;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -18,16 +19,8 @@ import net.tangentmc.portalStick.components.GelTube;
 public class GelManager {
 	@Getter
 	List<GelTube> tubes = new ArrayList<>();
-	public void createTube(V10Block from, BlockFace facing, ItemStack stack) {
-		if (stack.getType() == Material.WOOL) {
-			if (stack.getData().getData() == (byte)1) {
-				stack = new ItemStack(Material.SAND,1,(short) 1);
-			}
-			if (stack.getData().getData() == (byte)3) {
-				stack = new ItemStack(Material.LAPIS_ORE);
-			}
-		}
-		GelTube tube = new GelTube(from.getHandle().getBlock(),facing, stack);
+	public void createTube(V10Block from, BlockFace facing, GelType type) {
+		GelTube tube = new GelTube(from.getHandle().getBlock(),facing, type);
 		tubes.add(tube);
 		
 	}
@@ -47,7 +40,7 @@ public class GelManager {
 			InventoryHolder ih = (InventoryHolder) b.getState();
 			ItemStack is = ih.getInventory().getItem(4);
 			if(is != null) {
-				createTube(blk,disp.getFacing(),is);
+				createTube(blk,disp.getFacing(),GelType.fromDispenser(is));
 				return;
 			}
 		} 

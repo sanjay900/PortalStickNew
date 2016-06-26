@@ -12,7 +12,6 @@ import org.joml.Vector3d;
 import java.util.Arrays;
 
 public class VectorUtil {
-    //TODO: does z and y need to be switched?
     public static Vector rotate(Quaterniond q, Vector origin) {
         Vector3d v0 = new Vector3d(origin.getX(), origin.getY(), origin.getZ());
         Vector3d tv = q.transform(v0);

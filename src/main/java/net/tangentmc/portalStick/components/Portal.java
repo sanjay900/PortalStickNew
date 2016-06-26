@@ -123,7 +123,7 @@ public class Portal implements MetadataSaver {
         spawnPortalStand();
 
         if (getDestination() == null) {
-            portal.setHelmet(new ItemStack(Material.STAINED_GLASS, 1, (short) (primary ? 3 : 1)));
+            portal.setHelmet(new ItemStack(Material.DIAMOND_HOE, 1, (short) (primary ? 64 : 66)));
             portal.setMetadata("portalobj2", new FixedMetadataValue(PortalStick.getInstance(), this));
             open = true;
             if (this.back != null) {
@@ -140,7 +140,7 @@ public class Portal implements MetadataSaver {
             return true;
         }
 
-        portal.setHelmet(new ItemStack(Material.WOOL, 1, (short) (primary ? 3 : 1)));
+        portal.setHelmet(new ItemStack(Material.DIAMOND_HOE, 1, (short) (primary ? 63 : 65)));
         if (top == null) {
             portal.setMetadata("portalobj", new FixedMetadataValue(PortalStick.getInstance(), this));
         }
@@ -172,10 +172,6 @@ public class Portal implements MetadataSaver {
         open = true;
         return true;
     }
-
-    /*TODO: instead of using this for entities, it should be easy enough
-      to test their velocities and check they are going to get into the portal
-    */
     public void openFor(Entity en) {
         if (top == null) return;
         final Player pl = en instanceof Player ? (Player) en : null;
@@ -228,7 +224,17 @@ public class Portal implements MetadataSaver {
             e.printStackTrace();
         }
     }
-
+    public void closePlugin() {
+        if (topStorage != null) {
+            topStorage.set();
+        }
+        if (bottomStorage != null)
+            bottomStorage.set();
+        if (this.back != null) {
+            back.remove();
+        }
+        portal.remove();
+    }
     public void close() {
         if (!this.open) return;
         open = false;
@@ -326,16 +332,6 @@ public class Portal implements MetadataSaver {
         Block block = destination.bottom;
         if (top != null && loc.getY() > bottom.getY()) {
             block = destination.bottom;
-        }
-        Material mat = block.getType();
-        //TODO: These validation checks are bad since there is no gurantee that the block will be air now
-        //though, if they failed before the block was just set to air so we might be fine.
-        boolean valid = mat == Material.AIR;
-        if (!valid) {
-            valid = !mat.isSolid();
-        }
-        if (!valid) {
-            valid = block.isLiquid();
         }
         Vector v = this.facing;
         Quaterniond q = VectorUtil.getRotationTo(v, new Vector(0, 0, 0).subtract(destination.facing));

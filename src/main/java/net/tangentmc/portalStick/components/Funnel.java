@@ -148,7 +148,7 @@ public class Funnel extends Bridge implements MetadataSaver {
 				if (en instanceof Player) {
 					((Player) en).setFlying(false);
 				} else {
-					((NMSEntity) en).setFrozen(false);
+					en.setGravity(false);
 				}
 			});
 		}, 1L);

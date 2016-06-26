@@ -20,7 +20,7 @@ import net.tangentmc.portalStick.utils.Util;
 
 @NoArgsConstructor
 //TODO: Boats have hit boxes. We should replace bridges with most of the code from funnel, and then use boats to make them solid
-//TODO: Merge funnel and bridge
+//TODO: Merge funnel and bridge as they are both entity based
 public class Bridge {
 	BlockIterator it;
 	@Getter

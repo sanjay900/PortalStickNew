@@ -3,6 +3,7 @@ package net.tangentmc.portalStick.utils;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+import net.tangentmc.portalStick.PortalStick;
 import org.bukkit.entity.Entity;
 /**
  * An interface thats capable of saving itself inside the metadata of an entity
@@ -25,6 +26,11 @@ public interface MetadataSaver {
 	static <T extends MetadataSaver> T get(Entity en,Class<? extends T> clazz) {
 		if (!isInstance(en,clazz)) return null;
 		return (T) en.getMetadata(getMetadataName(clazz)).get(0).value();
+	}
+	@SuppressWarnings("unchecked")
+	static <T extends MetadataSaver> T get(Entity en, String meta) {
+		if (!en.hasMetadata(meta)) return null;
+		return (T) en.getMetadata(meta).get(0).value();
 	}
 	@Retention(value = RetentionPolicy.RUNTIME)
 	@interface Metadata {

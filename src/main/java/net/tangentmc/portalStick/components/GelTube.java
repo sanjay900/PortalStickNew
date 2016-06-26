@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
+import lombok.Getter;
+import net.tangentmc.portalStick.utils.GelType;
 import net.tangentmc.portalStick.utils.MetadataSaver;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -30,7 +32,8 @@ import net.tangentmc.portalStick.utils.Util;
 public class GelTube extends BukkitRunnable implements MetadataSaver {
 	Block dispBlock;
 	BlockFace direction;
-	ItemStack stack;
+    @Getter
+	GelType type;
 	boolean run = true;
 	private static final Material[] gelBlacklist = new Material[] {
 			Material.ANVIL,
@@ -75,10 +78,10 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
 			Material.WALL_SIGN,
 			Material.SIGN_POST
 	};
-	public GelTube(Block dispBlock, BlockFace direction, ItemStack stack) {
+	public GelTube(Block dispBlock, BlockFace direction, GelType type) {
 		this.direction = direction;
 		this.dispBlock = dispBlock;
-		this.stack = stack;
+		this.type= type;
 		this.runTaskTimer(PortalStick.getInstance(), 1l, 5l);
 	}
 	public String getStringLocation()
@@ -96,6 +99,7 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
 		}
 		ArmorStand as = (ArmorStand) dispBlock.getWorld().spawnEntity(dispBlock.getLocation().add(FaceUtil.faceToVector(direction).add(new Vector(0.5,0,0.5))), EntityType.ARMOR_STAND);
 		NMSArmorStand.wrap(as).setWillSave(false);
+        NMSArmorStand.wrap(as).setCollides(true);
 		if (direction == BlockFace.DOWN)
 			as.setVelocity(new Vector(0,-0.00000000001,0));
 		else
@@ -104,10 +108,15 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
 		as.setVisible(false);
 		as.setArms(false);
 		as.setBasePlate(false);
+        as.setSmall(true);
+        as.setSilent(true);
+        as.setAI(false);
+        as.setMarker(true);
         as.setRemoveWhenFarAway(false);
-		as.setHelmet(stack);
+		as.setHelmet(type.randomBlob());
 		as.setMetadata(getMetadataName(), new FixedMetadataValue(PortalStick.getInstance(),this));
 		as.setMetadata("sizeY", new FixedMetadataValue(PortalStick.getInstance(),0));
+
 	}
 	public void stop() {
 		this.cancel();
@@ -121,13 +130,26 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
 	HashMap<V10Block,BlockStorage> changedBlocks = new HashMap<>();
 	public void groundCollide(Block ground) {
 		if (!run) return;
+        //Water washes paint away
+        if (type == GelType.WATER) {
+            for (Entity en: dispBlock.getWorld().getEntities()) {
+                GelTube t = Util.getInstance(this.getClass(),en);
+                if (t != null) {
+                    if (t.changedBlocks.containsKey(new V10Block(ground))) {
+                        t.changedBlocks.get(new V10Block(ground)).set();
+                        t.changedBlocks.remove(new V10Block(ground));
+                    }
+                }
+            }
+            return;
+        }
 		if (Util.retrieveMetadata(ground, 1, Laser.class) != null) return;
 		//We dont want to change the dispenser itself (in the case of dispensers facing upwards)
 		if (new V10Block(ground).equals(new V10Block(this.dispBlock))) return;
 		if (changedBlocks.containsKey(new V10Block(ground))) return;
 		if (Arrays.asList(gelBlacklist).contains(ground.getType())) return;
 		changedBlocks.put(new V10Block(ground),new BlockStorage(ground));
-		ground.setType(Material.WOOL);
-		ground.setData(stack.getType()==Material.SAND?(byte)1:(byte)3);
+		ground.setType(type.getGround().getType());
+		ground.setData(type.getGround().getData().getData());
 	}
 }
