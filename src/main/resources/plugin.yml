@@ -3,7 +3,7 @@ main: net.tangentmc.portalStick.PortalStick
 version: ${project.version}
 authors: [matejdro, oliverw92, V10lator, sanjay900]
 softdepend: [WorldGuard]
-depend: [ProtocolLib, nmsUtils]
+depend: [ProtocolLib]
 commands:
   portalstick:
     description: Aperture Science Portal Stick
