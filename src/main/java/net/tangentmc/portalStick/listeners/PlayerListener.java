@@ -27,6 +27,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryCreativeEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Door;
 import org.bukkit.material.MaterialData;
@@ -302,11 +303,13 @@ public class PlayerListener implements Listener {
                 }
 
             } else {
-                BlockFace clicked = evt.getBlockFace();
-                Wire.WireType type = Wire.WireType.getType(evt.getItem());
-                if (type != null) {
-                    Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createSign(evt.getClickedBlock(), clicked, type,evt.getPlayer().getLocation().getDirection()));
-                    evt.setCancelled(true);
+                if (evt.getItem().hasItemMeta() && !evt.getItem().getItemMeta().getItemFlags().contains(ItemFlag.HIDE_UNBREAKABLE) && evt.getItem().getItemMeta().spigot().isUnbreakable()) {
+                    BlockFace clicked = evt.getBlockFace();
+                    Wire.WireType type = Wire.WireType.getType(evt.getItem());
+                    if (type != null) {
+                        Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createSign(evt.getClickedBlock(), clicked, type, evt.getPlayer().getLocation().getDirection()));
+                        evt.setCancelled(true);
+                    }
                 }
             }
 

@@ -202,8 +202,8 @@ public class BlockListener implements Listener{
 	}
 
 	private void summonStand(Location location, BlockFace facing) {
-        location = location.add(0.5, -0.25, 0.5)
-                .add(FaceUtil.faceToVector(FaceUtil.rotate(facing,-2),0.2))
+        location = location.add(0.5, 0.2, 0.5)
+                .add(FaceUtil.faceToVector(FaceUtil.rotate(facing,-2),0.3))
                 .add(FaceUtil.faceToVector(facing.getOppositeFace(),0.2));
         if(location.getWorld().getNearbyEntities(location,1,1,1).stream().anyMatch(en -> en.getCustomName().equals("portalstand"))) return;
 		location.setDirection(FaceUtil.faceToVector(facing));

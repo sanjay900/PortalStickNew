@@ -4,11 +4,9 @@ import lombok.Getter;
 import lombok.Setter;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.RegionSetting;
 import net.tangentmc.portalStick.utils.Util;
 import org.bukkit.Bukkit;
-import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -112,17 +110,17 @@ public class PortalUser {
         } else if (!r.getBoolean(RegionSetting.ENABLE_ORANGE_PORTALS) || !upgradedGun){
             upgradedGun = false;
             if (this.primary != null) {
-                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)91));
+                is = CrosshairState.blue_both.create();
             } else {
-                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)90));
+                is = CrosshairState.blue_none.create();
             }
         } else {
             if (this.primary != null && this.secondary != null) {
-                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)89));
+                is = CrosshairState.none.create();
             } else if (this.primary != null) {
-                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)87));
+                is = CrosshairState.blue.create();
             } else if (this.secondary != null) {
-                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)88));
+                is = CrosshairState.orange.create();
             } else {
                 is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)86));
             }
@@ -141,7 +139,7 @@ public class PortalUser {
         items.add(itemDrop);
     }
 
-    public void removeAllDrops() {
+    void removeAllDrops() {
         items.forEach(Item::remove);
         items.clear();
         if (hasCube()) {
@@ -165,5 +163,15 @@ public class PortalUser {
         this.heldEntity = en;
         if (this.heldEntity != null)
             heldEntity.setGravity(false);
+    }
+    private enum CrosshairState {
+        both(86),orange(87),blue(88),none(89),blue_both(90),blue_none(91);
+        short data;
+        CrosshairState(int i) {
+            data = (short)i;
+        }
+        ItemStack create() {
+            return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, data));
+        }
     }
 }

@@ -362,8 +362,7 @@ public class Util {
 	public static ItemStack setUnbreakable(ItemStack orig) {
 		ItemMeta meta = orig.getItemMeta();
 		meta.spigot().setUnbreakable(true);
-		orig.setItemMeta(meta);
-		meta.addItemFlags (ItemFlag.HIDE_UNBREAKABLE);
+		meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
 		orig.setItemMeta(meta);
 		return orig;
 	}
