@@ -29,8 +29,8 @@ public class EntityListener implements Listener {
 
     @EventHandler
     public void entityCollide(EntityCollideWithEntityEvent evt) {
-        boolean willCollide = testCollision(evt.getTarget(), evt.getCollider());
-        willCollide |= testCollision(evt.getCollider(), evt.getTarget());
+        boolean willCollide = testCollision(evt.getTarget(), evt.getCollider(), evt.getVelocity());
+        willCollide |= testCollision(evt.getCollider(), evt.getTarget(), evt.getVelocity());
         evt.setWillCollide(willCollide);
     }
 
@@ -59,8 +59,7 @@ public class EntityListener implements Listener {
             collider.setGravity(false);
         }
     }
-
-    private boolean testCollision(Entity target, Entity collider) {
+    private boolean testCollision(Entity target, Entity collider, Vector motion) {
         Funnel f = Util.getInstance(Funnel.class, target);
         if (collider.isInsideVehicle()) collider = collider.getVehicle();
         if (f != null && !Util.checkInstance(Funnel.class, collider) && !Util.checkInstance(Portal.class, collider) && !collider.hasMetadata("portalobj2")) {
@@ -90,7 +89,7 @@ public class EntityListener implements Listener {
         boolean isholo = collider instanceof NMSHologram || (collider.isInsideVehicle() && collider.getVehicle() instanceof NMSHologram);
         Portal portal = Util.getInstance(Portal.class, target);
         if (portal != null && !Util.checkInstance(Funnel.class, collider) && !collider.hasMetadata("portalobj") && !collider.hasMetadata("portalobj2") && !Util.checkInstance(AutomatedPortal.class, collider)) {
-            portal.teleportEntity(collider, target.getLocation().toVector().subtract(collider.getLocation().toVector()));
+            portal.teleportEntity(collider, motion);
             return false;
         }
         if (target.hasMetadata("portalobj2") && collider instanceof Boat) {
@@ -98,17 +97,30 @@ public class EntityListener implements Listener {
             portal.teleportEntity(collider, target.getLocation().getDirection());
             return false;
         }
-        if (target.hasMetadata("portalobj2") && !collider.hasMetadata("portalobj")) {
+        if (target.hasMetadata("portalobj2") && !collider.hasMetadata("portalobj") && !collider.hasMetadata("portalobj2")) {
             portal = (Portal) target.getMetadata("portalobj2").get(0).value();
-            if (collider instanceof Player) {
-                portal.openFor(collider);
+            if (collider instanceof Player && portal.getEntDirection() == null) {
+                portal.openFor((Player) collider);
             } else {
-                BlockIterator it = new BlockIterator(collider.getWorld(), collider.getLocation().toVector(), collider.getVelocity(), 0, 5);
-                while (it.hasNext()) {
-                    Location l = it.next().getLocation();
-                    if (portal.getBottom().getLocation().distance(l) < 1 || (portal.getTop() != null && portal.getTop().getLocation().distance(l) < 1)) {
-                        portal.teleportEntity(collider, target.getLocation().getDirection());
-                        return true;
+                if (portal.getEntDirection() != null){
+                    portal.teleportEntity(collider, motion);
+                }
+                if (collider.getVelocity().lengthSquared()>0) {
+                    BlockIterator it = new BlockIterator(collider.getWorld(), collider.getLocation().toVector(), collider.getVelocity(), 0, 5);
+                    while (it.hasNext()) {
+                        Location l = it.next().getLocation();
+                        if (portal.getBottom().getLocation().distance(l) < 1 || (portal.getTop() != null && portal.getTop().getLocation().distance(l) < 1)) {
+                            portal.teleportEntity(collider, motion);
+                            return true;
+                        }
+                        if (portal.getEntDirection() != null && (portal.getPortal().getLocation().distance(l)<0.4 ||
+                                portal.getPortal().getLocation()
+                                        .add(portal.getEntDirection().clone().multiply(0.5)).distance(l) <0.4||
+                                portal.getPortal().getLocation()
+                                        .subtract(portal.getEntDirection().clone().multiply(0.5)).distance(l)<0.4)) {
+                            portal.teleportEntity(collider, motion);
+                            return true;
+                        }
                     }
                 }
             }
@@ -141,6 +153,19 @@ public class EntityListener implements Listener {
 
         GelTube tube = Util.getInstance(GelTube.class, en);
         if (tube != null) {
+            Portal portal;
+
+            for (Entity entity : en.getNearbyEntities(1, 1, 1)) {
+                if (entity.hasMetadata("portalobj2")) {
+                    portal = (Portal) entity.getMetadata("portalobj2").get(0).value();
+                    if (portal.getDestination() == null) {
+                        en.remove();
+                        return;
+                    }
+                    portal.teleportEntity(en, en.getVelocity());
+                    return;
+                }
+            }
             tube.groundCollide(evt.getBlock());
             en.remove();
             return;

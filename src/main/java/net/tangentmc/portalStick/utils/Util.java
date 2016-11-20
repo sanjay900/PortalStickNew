@@ -5,6 +5,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import net.tangentmc.nmsUtils.utils.FaceUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -14,8 +17,11 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.FallingBlock;
+import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockRedstoneEvent;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.material.Attachable;
 import org.bukkit.material.Directional;
 import org.bukkit.material.Lever;
@@ -31,70 +37,115 @@ import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.Config.Sound;
 
 public class Util {
+	@Data
+	@AllArgsConstructor
+	private static class UtilSound {
+		String sound;
+		float volume;
+		float pitch;
+		private static UtilSound parseSound(Sound sound) {
+			PortalStick plugin = PortalStick.getInstance();
+			String raw = plugin.getConfiguration().soundNative[sound.ordinal()];
+			if(raw == null || raw.equals(""))
+			{
+				if(plugin.getConfiguration().debug)
+					plugin.getLogger().info("Sound "+sound.toString()+" not found!");
+				return null;
+			}
+			String[] split = raw.split(":");
+			float volume = 1.0F;
+			float pitch = volume;
+			if(split.length > 1)
+				try
+				{
+					volume = Float.parseFloat(split[1]);
+				}
+				catch(Exception e)
+				{
+					if(plugin.getConfiguration().debug)
+						plugin.getLogger().info("Warning: Invalid volume \""+split[1]+"\" for sound "+split[0]);
+					volume = 1.0F;
+				}
+			if(split.length > 2)
+			{
+				try
+				{
+					pitch = Float.parseFloat(split[2]);
+				}
+				catch(Exception e)
+				{
+					if(plugin.getConfiguration().debug)
+						plugin.getLogger().info("Warning: Invalid pitch \""+split[2]+"\" for sound "+split[0]);
+					pitch = 1.0F;
+				}
+			}
+			return new UtilSound(split[0], volume, pitch);
+		}
+	}
 
+	public static
+	boolean checkBlock(List<String> canPlace, Block clicked) {
+		ItemStack c;
+		boolean found = false;
+		for (String s: canPlace) {
+			c = Utils.getItemData(s);
+			if (c.getType() == clicked.getType() && c.getData().getData() == clicked.getData()) {
+				found = true;
+				break;
+			}
+		}
+		return found;
+	}
+    public static ItemStack checkItemSlot(ItemStack slot, List<String> ice)
+    {
+        ItemStack id;
+        for (String is: ice)
+        {
+            id = Utils.getItemData(is);
+            if(slot.getType() == id.getType() && slot.getDurability() == id.getDurability())
+            {
+                return slot;
+            }
+        }
+        return null;
+    }
 	public static void playSound(Sound sound, V10Block loc)
 	{
 		PortalStick plugin = PortalStick.getInstance();
 		if (!plugin.getRegionManager().getRegion(loc).getBoolean(RegionSetting.ENABLE_SOUNDS))
 			return;
 
-		String raw = plugin.getConfiguration().soundNative[sound.ordinal()];
-		if(raw == null || raw.equals(""))
-		{
-			if(plugin.getConfiguration().debug)
-				plugin.getLogger().info("Sound "+sound.toString()+" not found!");
-			return;
-		}
-		String[] split = raw.split(":");
-		float volume = 1.0F;
-		float pitch = volume;
-		if(split.length > 1)
-			try
-		{
-				volume = Float.parseFloat(split[1]);
-		}
-		catch(Exception e)
-		{
-			if(plugin.getConfiguration().debug)
-				plugin.getLogger().info("Warning: Invalid volume \""+split[1]+"\" for sound "+split[0]);
-			volume = 1.0F;
-		}
-		if(split.length > 2)
-		{
-			try
-			{
-				pitch = Float.parseFloat(split[2]);
-			}
-			catch(Exception e)
-			{
-				if(plugin.getConfiguration().debug)
-					plugin.getLogger().info("Warning: Invalid pitch \""+split[2]+"\" for sound "+split[0]);
-				pitch = 1.0F;
-			}
-		}
+		UtilSound split = UtilSound.parseSound(sound);
+		if (split == null) return;
 		try
 		{
-			org.bukkit.Sound s = org.bukkit.Sound.valueOf(split[0]);
-			loc.getHandle().getWorld().playSound(loc.getHandle(), s, volume, pitch);
+			org.bukkit.Sound s = org.bukkit.Sound.valueOf(split.getSound());
+			loc.getHandle().getWorld().playSound(loc.getHandle(), s, split.getVolume(), split.getPitch());
 		}
 		catch(IllegalArgumentException e)
 		{
-			playWorldCustomSound(loc.getHandle(), split[0],10);
+			loc.getHandle().getWorld().playSound(loc.getHandle(), split.getSound(),split.getVolume(), split.getPitch());
+		}
+	}
+
+	public static void playSoundTo(Sound sound, Player pl)
+	{
+		PortalStick plugin = PortalStick.getInstance();
+		if (!plugin.getRegionManager().getRegion(new V10Block(pl.getLocation())).getBoolean(RegionSetting.ENABLE_SOUNDS))
+			return;
+
+		UtilSound split = UtilSound.parseSound(sound);
+		if (split == null) return;
+		try
+		{
+			org.bukkit.Sound s = org.bukkit.Sound.valueOf(split.getSound());
+			pl.playSound(pl.getLocation(), s, split.getVolume(), split.getPitch());
+		}
+		catch(IllegalArgumentException e)
+		{
+			pl.playSound(pl.getLocation(), split.getSound(),split.getVolume(), split.getPitch());
 		}
 
-
-	}
-	public static void playWorldCustomSound(Location l, String sound, int radius) {
-		l.getWorld().playSound(l, sound, 1, 1);
-	}
-	public static int getLeftPortalColor(int preset)
-	{
-		return Integer.parseInt(PortalStick.getInstance().getConfiguration().ColorPresets.get(preset).split("-")[0]);
-	}
-
-	public static int getRightPortalColor(int preset)
-	{
-		return Integer.parseInt(PortalStick.getInstance().getConfiguration().ColorPresets.get(preset).split("-")[1]);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -149,20 +200,12 @@ public class Util {
 		supportState.setType(Material.AIR);
 		supportState.update(true, false);
 		initialSupportState.update(true);
-
-		// lets call blockredstone events on the source block and the lever
-		// in order to correctly update all surrounding blocks
-		BlockRedstoneEvent leverEvent = new BlockRedstoneEvent(block, state ? 0 : 15, state ? 15 : 0);
-		BlockRedstoneEvent sourceEvent = new BlockRedstoneEvent(source, state ? 0 : 15, state ? 15 : 0);
-		Bukkit.getServer().getPluginManager().callEvent(leverEvent);
-		Bukkit.getServer().getPluginManager().callEvent(sourceEvent);
 		return state;
 	}
-	static BlockFace[] faces = new BlockFace[]{BlockFace.WEST,BlockFace.NORTH,BlockFace.EAST,BlockFace.SOUTH};
 	public static BlockFace getGlassPaneDirection(Block glass, Material... allowed) {
 		ArrayList<Material> allowedl = new ArrayList<>(Arrays.asList(allowed));
 		allowedl.add(Material.AIR);
-		List<BlockFace> facing = Arrays.stream(faces).filter(f -> allowedl.contains(glass.getRelative(f).getType())).collect(Collectors.toList());
+		List<BlockFace> facing = Arrays.stream(FaceUtil.AXIS).filter(f -> allowedl.contains(glass.getRelative(f).getType())).collect(Collectors.toList());
 		if (facing.size() == 1) return facing.get(0);
 		return null;
 	}
@@ -315,5 +358,13 @@ public class Util {
 	}
 	public static boolean isTranslucent(Material mt) {
 		return mt.name().contains("GLASS") || !mt.isSolid() || mt.isTransparent();
+	}
+	public static ItemStack setUnbreakable(ItemStack orig) {
+		ItemMeta meta = orig.getItemMeta();
+		meta.spigot().setUnbreakable(true);
+		orig.setItemMeta(meta);
+		meta.addItemFlags (ItemFlag.HIDE_UNBREAKABLE);
+		orig.setItemMeta(meta);
+		return orig;
 	}
 }

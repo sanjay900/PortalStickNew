@@ -160,8 +160,8 @@ public class Config {
 			if(valid)
 				valid = a > 0 && b > 0 &&
 				a < 16 && b < 16 &&
-				!DyeColor.getByData(a).name().contains("GRAY") &&
-				!DyeColor.getByData(b).name().contains("GRAY");
+				!DyeColor.getByDyeData(a).name().contains("GRAY") &&
+				!DyeColor.getByDyeData(b).name().contains("GRAY");
 				if(!valid) {
 					if(debug)
 						plugin.getLogger().warning("Removing invalid color preset: "+st);
@@ -216,7 +216,6 @@ public class Config {
 
 		//Validate regions
 		plugin.getRegionManager().regions.values().stream().filter(region -> !region.validateRedGel() && debug).forEach(region -> plugin.getLogger().info("Inavlid red-gel-max-velocity for region \"" + region.name + "\" - fixing!"));
-
 		//Load grills
 		for (String grill : (grillConfig.getStringList("grills")))
 			plugin.getGrillManager().loadGrill(grill);

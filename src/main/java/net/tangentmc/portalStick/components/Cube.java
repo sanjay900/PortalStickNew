@@ -4,6 +4,7 @@ import net.tangentmc.nmsUtils.utils.BlockUtil;
 import net.tangentmc.portalStick.utils.GelType;
 import net.tangentmc.portalStick.utils.MetadataSaver;
 import net.tangentmc.portalStick.utils.RegionSetting;
+import net.tangentmc.portalStick.utils.Util;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -56,15 +57,15 @@ public class Cube implements MetadataSaver {
         }
         public ItemStack getCube(GelType type) {
             if (type == null) {
-                return new ItemStack(Material.DIAMOND_HOE,1,(short)normal);
+                return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)normal));
             }
             switch (type) {
                 case SPEED:
-                    return new ItemStack(Material.DIAMOND_HOE,1,(short)speed);
+                    return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)speed));
                 case JUMP:
-                    return new ItemStack(Material.DIAMOND_HOE,1,(short)jump);
+                    return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)jump));
             }
-            return new ItemStack(Material.DIAMOND_HOE,1,(short)normal);
+            return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)normal));
         }
     }
     GelType gelType;

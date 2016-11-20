@@ -60,18 +60,15 @@ public class Laser implements MetadataSaver {
                     if (en.hasMetadata("portalobj2")) {
                         Portal pl = (Portal) en.getMetadata("portalobj2").get(0).value();
                         if (pl.getDestination() == null) continue;
-                        pl = pl.getDestination();
-                        Location loc = pl.bottom.getLocation().add(pl.getFacing()).setDirection(pl.getFacing());
-                        if (pl.top != null && current.getBlock().getY() > pl.bottom.getY()) {
-                            loc = pl.top.getLocation().add(pl.getFacing()).setDirection(pl.getFacing());
-                        }
-                        loc.add(0.5,0.5,0.5);
+                        Portal.TeleportLoc tloc = pl.teleportEntity(current,init.getDirection(),null);
+
+                        Location loc = tloc.getDestination().setDirection(tloc.getVelocity());
                         if (child != null) {
                             child.setInit(loc);
-                            child.sourcePortal = pl;
+                            child.sourcePortal = pl.getDestination();
                             child.sourceCube = null;
                         } else {
-                            child = new Laser(loc, pl);
+                            child = new Laser(loc, pl.getDestination());
                         }
                         world.spawnParticle(Particle.REDSTONE, loc, 2, 0, 0, 0, 0);
                         world.spawnParticle(Particle.REDSTONE, current, 2, 0, 0, 0, 0);

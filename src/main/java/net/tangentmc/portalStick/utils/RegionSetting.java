@@ -1,6 +1,7 @@
 package net.tangentmc.portalStick.utils;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public enum RegionSetting {
 	
@@ -16,23 +17,23 @@ public enum RegionSetting {
 	GRILL_GIVE_GUN_IF_NEEDED("grill-give-gun-if-needed", true, true),
 	GRILL_GIVE_BOOTS_IF_NEEDED("grill-give-boots-if-needed", true, true),
 	GRILL_REMOVE_EXTRA_GUNS("grill-remove-extra-guns", true, true),
-	GRILL_REMOVE_EXCEPTIONS("grill-remove-exceptions", Arrays.asList(new Integer[]{280,313}), false),
+	GRILL_REMOVE_EXCEPTIONS("grill-remove-exceptions", Arrays.asList("280","313"), false),
 	GRILL_ONE_EXCEPTION("grill-one-exception", true, true),
-	GRILL_MATERIAL("emancipation-grill-material", 48, true),
+	GRILL_MATERIAL("emancipation-grill-material", "48", true),
 	GRILL_MATERIAL_INSIDE("emancipation-grill-inside-material", "30", true),
 	GRILLS_CLEAR_ITEM_DROPS("grills-clear-item-drops", true, true),
 	ENABLE_GRILL_REDSTONE_DISABLING("enable-disabling-grill-with-redstone", true, true),
 	ENABLE_HARD_GLASS_BRIDGES("enable-hard-glass-bridges", true, true),
-	HARD_GLASS_BRIDGE_BASE_MATERIAL("hard-light-bridge-base-block", 42, true),
+	HARD_GLASS_BRIDGE_BASE_MATERIAL("hard-light-bridge-base-block", "42", true),
 	FUNNEL_BASE_MATERIAL("excursion-funnel-base-block", "41", true),
 	ENABLE_BRIDGE_REDSTONE_DISABLING("enable-disabling-glass-bridge-with-redstone", true, true),
-	TRANSPARENT_BLOCKS("transparent-blocks", Arrays.asList(new Integer[]{0,8,9,10,11,20,64,71,96,65,102,132}), false),
-	PORTAL_BLOCKS("portallable-blocks", Arrays.asList(new Integer[]{42}), false),
+	TRANSPARENT_BLOCKS("transparent-blocks", Arrays.asList("0","8","9","10","11","20","64","71","96","65","102","132"), false),
+	PORTAL_BLOCKS("portallable-blocks", Collections.singletonList("42"), false),
 	ALL_BLOCKS_PORTAL("all-blocks-allow-portals", false, true),
 	UNIQUE_INVENTORY("unique-inventory", false, true),
-	UNIQUE_INVENTORY_ITEMS("unique-inventory-items", Arrays.asList(new Integer[]{280,1}), false),
+	UNIQUE_INVENTORY_ITEMS("unique-inventory-items", Arrays.asList("280","1"), false),
 	ENABLE_FALL_DAMAGE_BOOTS("enable-fall-damage-boots", true, true),
-	FALL_DAMAGE_BOOTS("fall-damage-boots", 313, true),
+	FALL_DAMAGE_BOOTS("fall-damage-boots", "313", true),
 	VELOCITY_MULTIPLIER("velocity-multiplier", 1.0, true),
 	PREVENT_PORTAL_THROUGH_PORTAL("prevent-creating-portal-through-portal", false, true),
 	PREVENT_PORTAL_CLOSED_DOOR("prevent-creating-portal-through-closed-door", true, true),

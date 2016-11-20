@@ -70,16 +70,16 @@ public class WireManager {
             }
         }
     }
-    public void createWire(Block block, BlockFace facing) {
-        createWire(block,facing,WireType.WIRE);
+    public void createWire(Block block, BlockFace facing, Vector entityDirection) {
+        createWire(block,facing,WireType.WIRE,entityDirection);
     }
-    public void createSign(Block block, BlockFace facing, WireType type) {
-        createWire(block,facing,type);
+    public void createSign(Block block, BlockFace facing, WireType type, Vector entityDirection) {
+        createWire(block,facing,type,entityDirection);
     }
-    private void createWire(Block block, BlockFace facing,WireType type) {
+    private void createWire(Block block, BlockFace facing,WireType type, Vector entityDirection) {
         V10Block blk = new V10Block(block);
         if (!wiresupport.containsKey(blk)) wiresupport.put(blk, new ArrayList<>());
-        Wire w = new Wire(block,facing,type,plugin);
+        Wire w = new Wire(block,facing,type,plugin,entityDirection);
         if (wiresupport.containsKey(blk) && wireloc.containsKey(w.loc) && wiresupport.get(blk).stream().anyMatch(e -> wireloc.get(w.loc).contains(e))) {
             w.remove();
             return;
@@ -103,7 +103,6 @@ public class WireManager {
         }
         return wire;
     }
-    BlockFace[] faces = new BlockFace[]{BlockFace.NORTH,BlockFace.SOUTH,BlockFace.UP,BlockFace.DOWN,BlockFace.EAST,BlockFace.WEST};
     public Set<Wire> getNearbyWire(Wire wire) {
         HashSet<Wire> related = new HashSet<>();
         V10Block support = new V10Block(wire.getSupport());
@@ -113,7 +112,7 @@ public class WireManager {
             if (w.loc == wire.loc) continue;
             related.add(w);
         }
-        for (BlockFace face:faces) {
+        for (BlockFace face:FaceUtil.BLOCK_SIDES) {
             V10Block support2 = wire.loc.getRelative(face);
             if (wireloc.containsKey(support2)) {
                 for (Wire w : wireloc.get(support2)){
@@ -148,7 +147,7 @@ public class WireManager {
             BlockFace face =FaceUtil.getDirection(v).getOppositeFace();
             nearby.add(face);
         }
-        for (BlockFace face:faces) {
+        for (BlockFace face:FaceUtil.BLOCK_SIDES) {
             if (nearby.contains(face)) continue;;
             V10Block support2 = wire.loc.getRelative(face);
             if (wireloc.containsKey(support2)) {
@@ -202,18 +201,14 @@ public class WireManager {
         }
         if (block.getType() == Material.REDSTONE_WIRE) return;
         if (this.wireloc.containsKey(new V10Block(block))) {
-            Iterator<Wire> it = this.wireloc.get(new V10Block(block)).stream().iterator();
-            while (it.hasNext()) {
-                it.next().setPowered(power, reason);
+            for (Wire wire : this.wireloc.get(new V10Block(block))) {
+                wire.setPowered(power, reason);
             }
         }
     }
     public void blockBreak(Block block) {
         if (this.wiresupport.containsKey(new V10Block(block))) {
-            Iterator<Wire> it = this.wiresupport.get(new V10Block(block)).stream().iterator();
-            while (it.hasNext()) {
-                it.next().remove();
-            }
+            this.wiresupport.get(new V10Block(block)).stream().collect(Collectors.toList()).forEach(Wire::remove);
         }
     }
 

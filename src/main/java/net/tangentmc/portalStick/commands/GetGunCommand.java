@@ -16,6 +16,7 @@ public class GetGunCommand extends BaseCommand {
         ItemStack gun = Util.createPortalGun();
         if(!player.getInventory().addItem(gun).isEmpty())
             player.getWorld().dropItemNaturally(player.getLocation(), gun);
+        plugin.getUser(playerName).setCrosshair();
         return true;
     }
     

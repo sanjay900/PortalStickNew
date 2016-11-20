@@ -10,6 +10,7 @@ import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 public class VectorUtil {
     public static Vector rotate(Quaterniond q, Vector origin) {
@@ -17,7 +18,6 @@ public class VectorUtil {
         Vector3d tv = q.transform(v0);
         return new Vector(tv.x, tv.y, tv.z);
     }
-
     /**
      * Calculate a quaternion between two vectors
      * Corrections based on the below link:
@@ -37,7 +37,7 @@ public class VectorUtil {
     }
 
     public static boolean isLookingAt(final Player player, final Entity e) {
-        return getTarget(player, Arrays.asList(e)) != null;
+        return getTarget(player, Collections.singletonList(e)) != null;
     }
 
     public static Entity getTargetEntity(final Entity entity) {

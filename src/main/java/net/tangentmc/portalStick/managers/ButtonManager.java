@@ -3,6 +3,7 @@ package net.tangentmc.portalStick.managers;
 import java.util.HashMap;
 import java.util.UUID;
 
+import net.tangentmc.nmsUtils.utils.FaceUtil;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -20,14 +21,6 @@ import net.tangentmc.portalStick.utils.Util;
 //the current button code is honestly extremely aids, we should redo it
 public class ButtonManager {
 	private PortalStick plugin = PortalStick.getInstance();
-
-	BlockFace[] blockfaces = new BlockFace[] { BlockFace.WEST,
-			BlockFace.NORTH_WEST, BlockFace.NORTH, BlockFace.NORTH_EAST,
-			BlockFace.EAST, BlockFace.SOUTH, BlockFace.SOUTH_WEST,
-			BlockFace.SOUTH_EAST };
-	BlockFace[] blockfacesn = new BlockFace[] { BlockFace.WEST,
-			BlockFace.NORTH, 
-			BlockFace.EAST, BlockFace.SOUTH};
 	public void disableAll() {
 		/*buttonsToEntity.values().forEach(b -> changeBtn(b, false));*/
 	}
@@ -38,7 +31,7 @@ public class ButtonManager {
 		if ((blockUnder.getType()==Material.WOOL) && (blockUnder.getData() == (byte) 14|| blockUnder.getData() == (byte) 5)) {
 			middle = blockUnder;
 		} else {
-			for (BlockFace f : blockfaces) {
+			for (BlockFace f : FaceUtil.RADIAL) {
 				if (blockUnder.getRelative(f).getType() == Material.WOOL
 						&& (blockUnder.getRelative(f).getData() == (byte) 14||blockUnder.getRelative(f).getData() == (byte) 5)) {
 					middle = blockUnder.getRelative(f);
@@ -66,7 +59,7 @@ public class ButtonManager {
 			Util.playSound(Sound.BUTTON_UP, new V10Block(middle));
 		}
 		middle.setTypeIdAndData(Material.WOOL.getId(), data, false);
-		for (BlockFace f : blockfacesn) {
+		for (BlockFace f : FaceUtil.AXIS) {
 			Block block = under.getRelative(f,2);
 			Lever lever;
 			BlockState state;

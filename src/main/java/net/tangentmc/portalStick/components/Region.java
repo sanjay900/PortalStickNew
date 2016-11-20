@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import lombok.ToString;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -13,7 +14,7 @@ import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.RegionSetting;
 import net.tangentmc.portalStick.utils.Util;
-
+@ToString
 public class Region extends PortalUser 
 {
 	public HashMap<RegionSetting, Object> settings = new HashMap<RegionSetting, Object>();
@@ -24,9 +25,6 @@ public class Region extends PortalUser
 	
 	public final String name;
 	
-	public Portal blueDestination; // Destination of the blue automated portal
-	public Portal orangeDestination; // Destination of the orange automated portal
-	
 	public Region(PortalStick plugin, String name)
 	{
 		super("§region§_"+name);
@@ -36,47 +34,37 @@ public class Region extends PortalUser
 	@Override
 	public Portal getPrimary() {
 		if (super.getPrimary() != null) return super.getPrimary();
-		World world = null;
+		return getPortals(true).stream().findAny().orElse(null);
+	}
+	List<Portal> getPortals(boolean primary) {
+		ArrayList<Portal> portals = new ArrayList<>();
+		World world = getWorld();
+		if (world == null) return portals;
+		Portal portal;
+		for (Entity en : world.getEntities()) {
+			portal = Util.getInstance(Portal.class, en);
+			if (portal == null) portal = Util.getInstance("portalobj2",en);
+			if (portal != null && portal.isOpen() && portal.isPrimary() == primary && contains(new V10Block(en.getLocation()))) {
+				portals.add(portal);
+			}
+		}
+		return portals;
+	}
+	World getWorld() {
 		if (min.getWorldName() != null) {
-			 world = min.getHandle().getWorld();
+			return min.getHandle().getWorld();
 		} else {
 			if (secondary != null) {
-				world = secondary.bottom.getWorld();
+				return secondary.bottom.getWorld();
 			} else {
 				return null;
 			}
 		}
-		Portal portal;
-		for (Entity en : world.getEntities()) {
-			portal = Util.getInstance(Portal.class, en);
-			if (portal != null && portal.isPrimary()) {
-				return portal;
-			}
-		}
-		return null;
 	}
-
 	@Override
 	public Portal getSecondary() {
 		if (super.getSecondary() != null) return super.getSecondary();
-		Portal portal;
-		World world = null;
-		if (min.getWorldName() != null) {
-			 world = min.getHandle().getWorld();
-		} else {
-			if (secondary != null) {
-				world = secondary.bottom.getWorld();
-			} else {
-				return null;
-			}
-		}
-		for (Entity en : world.getEntities()) {
-			portal = Util.getInstance(Portal.class, en);
-			if (portal != null && !portal.isPrimary()) {
-				return portal;
-			}
-		}
-		return null;
+		return getPortals(false).stream().findAny().orElse(null);
 	}
 	public boolean updateLocation(Player player) {
 		String[] loc = getString(RegionSetting.LOCATION).split(":");
@@ -166,10 +154,7 @@ public class Region extends PortalUser
 	}
 		
 	public boolean contains(V10Block loc) {
-		return loc.getWorldName().equals(min.getWorldName()) &&
-				loc.getX() >= min.getX() && loc.getX() <= max.getX() &&
-				loc.getY() >= min.getY() && loc.getY() <= max.getY() &&
-				loc.getZ() >= min.getZ() && loc.getZ() <= max.getZ();
+		return this.name.equals("global") || loc.getWorldName().equals(min.getWorldName()) && loc.getX() >= min.getX() && loc.getX() <= max.getX() && loc.getY() >= min.getY() && loc.getY() <= max.getY() && loc.getZ() >= min.getZ() && loc.getZ() <= max.getZ();
 	}
 	
 	public boolean getBoolean(RegionSetting setting) {
@@ -178,8 +163,8 @@ public class Region extends PortalUser
 	public int getInt(RegionSetting setting) {
 		return (Integer)settings.get(setting);
 	}
-	public List<?> getList(RegionSetting setting) {
-		return (List<?>)settings.get(setting);
+	public <T> List<T> getList(RegionSetting setting) {
+		return (List<T>)settings.get(setting);
 	}
 	public String getString(RegionSetting setting) {
 		Object ret = settings.get(setting);

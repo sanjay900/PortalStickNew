@@ -1,43 +1,38 @@
 package net.tangentmc.portalStick;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.reflect.StructureModifier;
+import lombok.Getter;
+import net.tangentmc.nmsUtils.events.EntityCollideWithEntityEvent;
+import net.tangentmc.nmsUtils.utils.CommandBuilder;
+import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.commands.*;
-import net.tangentmc.portalStick.components.Cube;
-import net.tangentmc.portalStick.components.Laser;
+import net.tangentmc.portalStick.components.*;
+import net.tangentmc.portalStick.listeners.BlockListener;
+import net.tangentmc.portalStick.listeners.EntityListener;
+import net.tangentmc.portalStick.listeners.PlayerListener;
+import net.tangentmc.portalStick.managers.*;
+import net.tangentmc.portalStick.utils.Config;
+import net.tangentmc.portalStick.utils.GravityGunRunnable;
+import net.tangentmc.portalStick.utils.I18n;
+import net.tangentmc.portalStick.utils.Util;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.world.ChunkLoadEvent;
-import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import lombok.Getter;
-import net.tangentmc.nmsUtils.utils.CommandBuilder;
-import net.tangentmc.nmsUtils.utils.V10Block;
-import net.tangentmc.portalStick.components.Portal;
-import net.tangentmc.portalStick.components.PortalUser;
-import net.tangentmc.portalStick.listeners.BlockListener;
-import net.tangentmc.portalStick.listeners.EntityListener;
-import net.tangentmc.portalStick.listeners.PlayerListener;
-import net.tangentmc.portalStick.managers.ButtonManager;
-import net.tangentmc.portalStick.managers.FunnelBridgeManager;
-import net.tangentmc.portalStick.managers.GelManager;
-import net.tangentmc.portalStick.managers.GrillManager;
-import net.tangentmc.portalStick.managers.LaserManager;
-import net.tangentmc.portalStick.managers.RegionManager;
-import net.tangentmc.portalStick.managers.WireManager;
-import net.tangentmc.portalStick.utils.Config;
-import net.tangentmc.portalStick.utils.GravityGunRunnable;
-import net.tangentmc.portalStick.utils.I18n;
-import net.tangentmc.portalStick.utils.Util;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+
 @Getter
 public class PortalStick extends JavaPlugin implements CommandExecutor {
 	@Getter
@@ -97,8 +92,27 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
 		tmpList.add(new ToggleTextureCommand());
 		commands = tmpList.toArray(new BaseCommand[0]);
 		new GravityGunRunnable();
+		ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(this, PacketType.Play.Client.POSITION,PacketType.Play.Client.POSITION_LOOK,PacketType.Play.Client.FLYING) {
+			@Override
+			public void onPacketReceiving(PacketEvent event) {
+				if (event.getPacket().getBooleans().read(1)) {
+					StructureModifier<Double> structs = event.getPacket().getDoubles();
+					double vx = structs.read(0)-event.getPlayer().getLocation().getX();
+					double vy = structs.read(1)-event.getPlayer().getLocation().getY();
+					double vz = structs.read(2)-event.getPlayer().getLocation().getZ();
+                    Collection<Entity> list = event.getPlayer().getWorld().getNearbyEntities(event.getPlayer().getLocation().add(vx,vy,vz),0.25,0.25,0.25);
+					list.remove(event.getPlayer().getPassenger());
+					list.remove(event.getPlayer());
+                    list.stream().filter(entity1 -> Util.checkInstance(Portal.class, entity1)).forEach(entity1 -> {
+                        EntityCollideWithEntityEvent ev = new EntityCollideWithEntityEvent(event.getPlayer(), entity1, false, new org.bukkit.util.Vector(vx,vy,vz));
+                        Bukkit.getPluginManager().callEvent(ev);
+                        event.setCancelled(true);
+                    });
+				}
+			}
+		});
 	}
-	
+
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String args[])
 	{
 		if (args.length == 0)
@@ -109,23 +123,26 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
 		}
 		return false;
 	}
-	
+
 	public void onDisable() {
 		for (World w: Bukkit.getWorlds()) {
-            for (Entity en: w.getEntities()) {
-                Cube c = Util.getInstance(Cube.class, en);
-                Portal p = Util.getInstance(Portal.class, en);
-                if (p == null) p = Util.getInstance("portalobj2",en);
-                if (c != null) c.remove();
-                if (p != null) p.closePlugin();
-            }
+			for (Entity en: w.getEntities()) {
+				Cube c = Util.getInstance(Cube.class, en);
+				Portal p = Util.getInstance(Portal.class, en);
+				Grill g = Util.getInstance(Grill.class, en);
+				if (p == null) p = Util.getInstance("portalobj2",en);
+				if (c != null) c.remove();
+				if (p != null) p.closePlugin();
+				if (g != null) g.close();
+			}
 		}
 		bridgeManager.disableAll();
 		gelManager.disableAll();
 		//Reset all recievers
 		laserManager.lasers.forEach(Laser::remove);
+		commands = new BaseCommand[]{};
 	}
-	
+
 	public PortalUser getUser(String name) {
 		if (users.containsKey(name)) {
 			return users.get(name);
@@ -165,5 +182,5 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
 		}
 		return player.hasPermission("*");
 	}
-	
+
 }

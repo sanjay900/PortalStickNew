@@ -24,7 +24,7 @@ public enum GelType {
     public static Random random = new Random();
 
     public ItemStack randomBlob() {
-        return new ItemStack(Material.DIAMOND_HOE, 1, (short) blobs[random.nextInt(blobs.length)]);
+        return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE, 1, (short) blobs[random.nextInt(blobs.length)]));
     }
 
     public static GelType fromDispenser(ItemStack is) {

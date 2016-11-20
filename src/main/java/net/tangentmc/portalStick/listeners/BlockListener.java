@@ -58,6 +58,7 @@ public class BlockListener implements Listener{
 	public void onBlockBreak(BlockBreakEvent evt) {
 		PortalStick.getInstance().getBridgeManager().blockUpdate(evt.getBlock());
         PortalStick.getInstance().getWireManager().blockBreak(evt.getBlock());
+        PortalStick.getInstance().getGrillManager().blockBreak(evt.getBlock());
         Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),()->
                 PortalStick.getInstance().getWireManager().blockUpdate(evt.getBlock()),1L);
 	}
@@ -92,7 +93,6 @@ public class BlockListener implements Listener{
 		AutomatedPortal portal = Util.retrieveMetadata(evt.getBlock(), 4, AutomatedPortal.class);
 		if (portal != null) {
 			Block wool = portal.getColor();
-
 			Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(), () -> {
 				if (FaceUtil.isVertical(portal.getFacing())) {
 					BlockFace face = BlockFace.WEST;
@@ -202,15 +202,14 @@ public class BlockListener implements Listener{
 	}
 
 	private void summonStand(Location location, BlockFace facing) {
+        location = location.add(0.5, -0.25, 0.5)
+                .add(FaceUtil.faceToVector(FaceUtil.rotate(facing,-2),0.2))
+                .add(FaceUtil.faceToVector(facing.getOppositeFace(),0.2));
+        if(location.getWorld().getNearbyEntities(location,1,1,1).stream().anyMatch(en -> en.getCustomName().equals("portalstand"))) return;
 		location.setDirection(FaceUtil.faceToVector(facing));
-		ArmorStand as = (ArmorStand) location.getWorld().spawnEntity(
-				location.add(0.5, -0.25, 0.5)
-						.add(FaceUtil.faceToVector(FaceUtil.rotate(facing,-2),0.2))
-						.add(FaceUtil.faceToVector(facing.getOppositeFace(),0.2))
-				, EntityType.ARMOR_STAND);
+		ArmorStand as = (ArmorStand) location.getWorld().spawnEntity(location, EntityType.ARMOR_STAND);
 		NMSArmorStand.wrap(as).lock();
 		NMSArmorStand.wrap(as).setWillSave(false);
-		//Fix
 		as.setRightArmPose(new EulerAngle(Math.toRadians(0),0,Math.toRadians(-5)));
 		as.setItemInHand(new ItemStack(Material.STICK));
 		as.setCustomName("portalstand");

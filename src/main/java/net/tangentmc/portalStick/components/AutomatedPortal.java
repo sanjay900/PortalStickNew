@@ -1,11 +1,13 @@
 package net.tangentmc.portalStick.components;
 
 import net.tangentmc.portalStick.utils.MetadataSaver;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.EulerAngle;
@@ -25,13 +27,17 @@ public class AutomatedPortal implements MetadataSaver {
 	BlockFace facing;
 	ArmorStand autoStand;
 	Block loc;
-	public AutomatedPortal(Block b, BlockFace clicked) {
+	public AutomatedPortal(Block b, BlockFace clicked, Player pl) {
 		if (!FaceUtil.isVertical(clicked))
 			this.loc = b.getRelative(BlockFace.DOWN);
 		else
 			this.loc = b;
 		facing = FaceUtil.rotate(clicked, 2);
-		autoStand = (ArmorStand) b.getWorld().spawnEntity(b.getLocation().add(0.5, -1, FaceUtil.isVertical(clicked)?0:0.5).add(FaceUtil.faceToVector(clicked).multiply(0.8)).setDirection(FaceUtil.faceToVector(facing)), EntityType.ARMOR_STAND);
+		Location loc = b.getLocation().add(0.5, -1, FaceUtil.isVertical(clicked)?0:0.5).add(FaceUtil.faceToVector(clicked).multiply(0.8)).setDirection(FaceUtil.faceToVector(facing));
+		if (FaceUtil.isVertical(clicked)) {
+			loc.setDirection(pl.getLocation().getDirection().setY(0));
+		}
+		autoStand = (ArmorStand) b.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
 		facing = clicked;
 		if (facing == BlockFace.UP) {
 			autoStand.setHeadPose(new EulerAngle(Math.toRadians(90),0,Math.toRadians(-90)));
@@ -60,10 +66,12 @@ public class AutomatedPortal implements MetadataSaver {
 		Region r = PortalStick.getInstance().getRegionManager().getRegion(new V10Block(loc));
 		if (getColor().getData() == (byte)1) {
 			//orange
-			r.setSecondary(loc,FaceUtil.faceToVector(facing));
+			r.setSecondary(loc,FaceUtil.faceToVector(facing),autoStand);
+			if (r.getPrimary() != null) r.getPrimary().open();
 		}
 		if (getColor().getData() == (byte)3) {
-			r.setPrimary(loc,FaceUtil.faceToVector(facing));
+			r.setPrimary(loc,FaceUtil.faceToVector(facing),autoStand);
+			if (r.getSecondary() != null) r.getSecondary().open();
 		}
 	}
 	public void close() {

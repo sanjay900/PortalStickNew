@@ -98,14 +98,13 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
 			return;
 		}
 		ArmorStand as = (ArmorStand) dispBlock.getWorld().spawnEntity(dispBlock.getLocation().add(FaceUtil.faceToVector(direction).add(new Vector(0.5,0,0.5))), EntityType.ARMOR_STAND);
-		NMSArmorStand.wrap(as).setWillSave(false);
-        NMSArmorStand.wrap(as).setCollides(true);
+		as.setVisible(false);
 		if (direction == BlockFace.DOWN)
 			as.setVelocity(new Vector(0,-0.00000000001,0));
 		else
 			as.setVelocity(FaceUtil.faceToVector(direction).multiply(r.nextInt(20)/10d));
 
-		as.setVisible(false);
+
 		as.setArms(false);
 		as.setBasePlate(false);
         as.setSmall(true);
@@ -116,6 +115,8 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
 		as.setHelmet(type.randomBlob());
 		as.setMetadata(getMetadataName(), new FixedMetadataValue(PortalStick.getInstance(),this));
 		as.setMetadata("sizeY", new FixedMetadataValue(PortalStick.getInstance(),0));
+		NMSArmorStand.wrap(as).setCollides(true);
+		NMSArmorStand.wrap(as).setWillSave(false);
 
 	}
 	public void stop() {
@@ -143,6 +144,10 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
             }
             return;
         }
+        if (ground.getType() == Material.COBBLESTONE_STAIRS) {
+            ground = ground.getRelative(BlockFace.DOWN);
+        }
+        if (ground.getType() == Material.SMOOTH_STAIRS) return;
 		if (Util.retrieveMetadata(ground, 1, Laser.class) != null) return;
 		//We dont want to change the dispenser itself (in the case of dispensers facing upwards)
 		if (new V10Block(ground).equals(new V10Block(this.dispBlock))) return;

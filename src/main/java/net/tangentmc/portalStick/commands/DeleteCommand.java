@@ -11,7 +11,7 @@ public class DeleteCommand extends BaseCommand {
 	}
 	
 	public boolean execute() {
-		plugin.getUser(playerName).removeAllPortals();
+		plugin.getUser(playerName).deletePortals();
 		Utils.sendMessage(sender, plugin.getI18n().getString("OwnPortalsDeleted", playerName));
 		return true;
 	}

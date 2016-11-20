@@ -40,12 +40,12 @@
 			<groupId>org.spigotmc</groupId>
 			<artifactId>spigot</artifactId>
 			<scope>provided</scope>
-			<version>1.10-R0.1-SNAPSHOT</version>
+			<version>1.11-R0.1-SNAPSHOT</version>
 		</dependency>
         <dependency>
             <groupId>org.joml</groupId>
             <artifactId>joml</artifactId>
-            <version>1.8.1-SNAPSHOT</version>
+            <version>1.8.2</version>
         </dependency>
 		<!-- Lombok -->
 		<dependency>
@@ -87,7 +87,7 @@
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>2.3.1</version>
 				<configuration>
-					<outputDirectory>/media/sanjay/Data/Users/Sanjay/Documents/Code/NewPlugins/NMSUtils/NMSUtils-plugin/server/plugins</outputDirectory>
+					<outputDirectory>D:\Users\Sanjay\Documents\Code\NewPlugins\NMSUtils\NMSUtils-plugin\server\plugins</outputDirectory>
 				</configuration>
 			</plugin>
 			<plugin>

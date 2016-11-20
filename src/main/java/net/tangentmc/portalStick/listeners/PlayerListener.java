@@ -11,9 +11,7 @@ import net.tangentmc.portalStick.utils.RegionChangeEvent;
 import net.tangentmc.portalStick.utils.RegionSetting;
 import net.tangentmc.portalStick.utils.Util;
 import net.tangentmc.portalStick.utils.VectorUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
@@ -32,6 +30,8 @@ import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Door;
 import org.bukkit.material.MaterialData;
+import org.bukkit.util.BlockIterator;
+import org.bukkit.util.Vector;
 
 import java.util.HashSet;
 import java.util.List;
@@ -47,7 +47,33 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void quit(PlayerQuitEvent evt) {
-        PortalStick.getInstance().getUser(evt.getPlayer().getName()).removeAllPortals();
+        PortalStick.getInstance().getUser(evt.getPlayer().getName()).deletePortals();
+    }
+    @EventHandler
+    public void vertPortalCollision(PlayerMoveEvent evt){
+        Portal portal;
+        Vector velocity = evt.getTo().toVector().subtract(evt.getFrom().toVector());
+        for (Entity target: evt.getTo().getWorld().getNearbyEntities(evt.getTo(),2,2,2)) {
+            if (!target.hasMetadata("portalobj2")) continue;
+            portal = (Portal) target.getMetadata("portalobj2").get(0).value();
+            if (Math.abs(velocity.lengthSquared()) > 1 && portal.getFacing().getY() > 0) {
+                BlockIterator it = new BlockIterator(evt.getPlayer().getWorld(), evt.getFrom().toVector(), velocity, 0, 5);
+                while (it.hasNext()) {
+                    //Increase the "reach" of vertical portals based on speed
+                    double d = Math.abs(velocity.lengthSquared())/2;
+                    Location l = it.next().getLocation();
+                    if (portal.getEntDirection() != null && (portal.getPortal().getLocation().distance(l)<d ||
+                            portal.getPortal().getLocation()
+                                    .add(portal.getEntDirection().clone().multiply(0.5)).distance(l) < d||
+                            portal.getPortal().getLocation()
+                                    .subtract(portal.getEntDirection().clone().multiply(0.5)).distance(l)<d)) {
+                        portal.teleportEntity(evt.getPlayer(), evt.getTo().toVector().subtract(evt.getFrom().toVector()));
+                        return;
+                    }
+                }
+            }
+
+        }
     }
 
     @EventHandler
@@ -57,11 +83,44 @@ public class PlayerListener implements Listener {
         Region to = rm.getRegion(new V10Block(evt.getTo()));
         Region from = rm.getRegion(new V10Block(evt.getFrom()));
         if (from != to) {
-            System.out.println("Moved between " + from + " and " + to);
             RegionChangeEvent evt2 = new RegionChangeEvent(from, to, false);
             Bukkit.getPluginManager().callEvent(evt2);
             evt.setCancelled(evt2.isCancelled());
+            //Clear portals when you move between regions to fix issues.
+            if (!evt.isCancelled()) {
+                PortalStick.getInstance().getUser(evt.getPlayer().getName()).deletePortals();
+            }
+        }
+        Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),PortalStick.getInstance().getUser(evt.getPlayer().getName())::setCrosshair,1L);
+    }
+    @EventHandler
+    public void gunPickup(PlayerMoveEvent event)
+    {
+        if(PortalStick.getInstance().getConfiguration().DisabledWorlds.contains(event.getPlayer().getLocation().getWorld().getName()))
+            return;
 
+        Optional<Entity> stand = event.getPlayer().getNearbyEntities(1, 1, 1).stream().filter(en -> en.getCustomName() != null && en.getCustomName().equals("portalstand")).findFirst();
+        if (stand.isPresent()) {
+            stand.get().remove();
+            ItemStack gun = Util.createPortalGun();
+            if (!event.getPlayer().getInventory().contains(gun))
+                event.getPlayer().getInventory().addItem(gun);
+            Region rg = PortalStick.getInstance().getRegionManager().getRegion(new V10Block(event.getTo()));
+            PortalUser user = PortalStick.getInstance().getUser(event.getPlayer().getName());
+            user.setUpgradedGun(rg.getBoolean(RegionSetting.ENABLE_ORANGE_PORTALS));
+            user.setCrosshair();
+            ItemStack tmp;
+            for (int i = 0;i<9;i++) {
+                tmp = event.getPlayer().getInventory().getItem(i);
+                if (tmp!= null && tmp.getType() == gun.getType() && tmp.getDurability() == gun.getDurability())
+                {
+                    event.getPlayer().getInventory().setHeldItemSlot(i);
+                    event.setCancelled(true);
+                    Util.playSoundTo(Sound.GUN_TAKE, event.getPlayer());
+                    return;
+                }
+
+            }
         }
     }
     @SuppressWarnings("deprecation")
@@ -70,26 +129,6 @@ public class PlayerListener implements Listener {
         if (event.getAction() != EntityUseAction.ATTACK) {
             Wire w = Util.getInstance(Wire.class, event.getEntity());
             if (w != null) {
-                Material type = event.getPlayer().getItemInHand().getType();
-                byte data = event.getPlayer().getItemInHand().getData().getData();
-                //Do this better, mabye a sign behind or something?
-                /*if (type == Material.STAINED_CLAY) {
-					int changed;
-					switch (data) {
-						case 13:
-							changed = w.addTimer();
-							break;
-						case 14:
-							changed = w.removeTimer();
-							break;
-						default:
-							w.cycle();
-							event.getPlayer().sendMessage("[PortalStick] Right click with red and green stained clay to modify the time this timer runs for.");
-							return;
-					}
-					event.getPlayer().sendMessage("[PortalStick] Timer time set to: "+changed+" seconds.");
-					return;
-				}*/
                 HashSet<Material> tb = new HashSet<>();
                 tb.add(Material.AIR);
                 List<Block> targetBlocks = event.getPlayer().getLineOfSight(tb, 120);
@@ -118,81 +157,84 @@ public class PlayerListener implements Listener {
     HashSet<Material> interactBlocks = new HashSet<>();
 
     @EventHandler
-    public void use(PlayerDropItemEvent event) {
+    public void swapHands(PlayerSwapHandItemsEvent event) {
         if (PortalStick.getInstance().getConfiguration().DisabledWorlds.contains(event.getPlayer().getLocation().getWorld().getName()))
             return;
-        if (Util.isPortalGun(event.getItemDrop().getItemStack())||Util.isGravityGun(event.getItemDrop().getItemStack()))
-            event.setCancelled(true);
+        event.setCancelled(true);
         PortalUser user = PortalStick.getInstance().getUser(event.getPlayer().getName());
         if (user.hasCube()) {
             Cube c = user.getCube();
             c.hold(event.getPlayer());
-            event.setCancelled(true);
-
         } else {
             Optional<Cube> cube = event.getPlayer().getNearbyEntities(2, 2, 2).stream().filter(en -> en.hasMetadata("cuben")).filter(en -> VectorUtil.isLookingAt(event.getPlayer(), en)).map(en -> (Cube) en.getMetadata("cuben").get(0).value()).findFirst();
             if (cube.isPresent()) {
                 Cube c = cube.get();
                 c.hold(event.getPlayer());
-                event.setCancelled(true);
             } else {
                 Block target = event.getPlayer().getTargetBlock(interactBlocks, 3);
                 if (target != null) {
-                    switch (target.getType()) {
-                        case STONE_BUTTON:
-                        case WOOD_BUTTON:
-                            Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(), () ->
-                                    this.setState(target), 10L);
-                        case LEVER:
-                            Bukkit.getScheduler().runTask(PortalStick.getInstance(), () ->
-                                    this.setState(target));
-
-                            event.setCancelled(true);
-                            break;
-                        case WOODEN_DOOR:
-                            Door d = (Door) target.getState().getData();
-                            d.setOpen(!d.isOpen());
-                            target.getState().setData(d);
-                            ;
-                            target.getState().update();
-                        default:
+                    if (target.getState() instanceof Door && !target.getType().name().contains("IRON")) {
+                        Door d = (Door) target.getState().getData();
+                        d.setOpen(!d.isOpen());
+                        target.getState().setData(d);
+                        target.getState().update();
+                    } else {
+                        switch (target.getType()) {
+                            case STONE_BUTTON:
+                            case WOOD_BUTTON:
+                                Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(), () ->
+                                        this.setState(target), 10L);
+                            case LEVER:
+                                Bukkit.getScheduler().runTask(PortalStick.getInstance(), () ->
+                                        this.setState(target));
+                                break;
+                            default:
+                        }
                     }
 
                 }
             }
         }
+
     }
     @EventHandler
-    //TODO: Why doesnt this work anymore?
+    public void use(PlayerDropItemEvent evt) {
+        if (Util.isPortalGun(evt.getItemDrop().getItemStack())) {
+            evt.setCancelled(true);
+            //Make sure hte inventory is restored before updating the crosshair
+            Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),()->
+                    PortalStick.getInstance().getUser(evt.getPlayer().getName()).deletePortals(),1L);
+        }
+    }
+    @EventHandler
     public void onPickBlock(final InventoryCreativeEvent event)
     {
         if (event.getAction() != InventoryAction.PLACE_ALL) return;
         final Player player = (Player)event.getWhoClicked();
-        Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> {
-            ItemStack item = player.getInventory().getItem(event.getSlot());
-            if (item != null && item.getType() == Material.ARMOR_STAND) {
-                Entity entity = VectorUtil.getTargetEntity(player);
-                if (entity != null && entity instanceof ArmorStand) {
-                    Wire w = Util.getInstance(Wire.class,entity);
-                    if (w != null) {
-                        if (!player.getInventory().contains(w.type.getWireType(false))) {
-                            player.getInventory().setItem(event.getSlot(), new ItemStack(w.type.getWireType(false)));
-                        } else {
-                            player.getInventory().setItem(event.getSlot(), new ItemStack(Material.AIR));
-                            for (int i = 0;i<9;i++) {
-                                if (player.getInventory().getItem(i)!= null && player.getInventory().getItem(i).getType() == Material.DIAMOND_HOE && player.getInventory().getItem(i).getDurability() == w.type.getWireType(false).getDurability())
-                                {
-                                    player.getInventory().setHeldItemSlot(i);
-                                    return;
-                                }
+        ItemStack item = event.getCursor();
+        if (item != null && item.getType() == Material.ARMOR_STAND) {
+            Entity entity = VectorUtil.getTargetEntity(player);
+            if (entity != null && entity instanceof ArmorStand) {
+                Wire w = Util.getInstance(Wire.class,entity);
+                if (w != null) {
+                    item = w.type.getWireType(false);
+                    if (player.getInventory().contains(item)) {
+                        ItemStack tmp;
+                        for (int i = 0;i<9;i++) {
+                            tmp = player.getInventory().getItem(i);
+                            if (tmp!= null && tmp.getType() == item.getType() && tmp.getDurability() == item.getDurability())
+                            {
+                                player.getInventory().setHeldItemSlot(i);
+                                event.setCancelled(true);
+                                return;
                             }
                         }
-                        return;
                     }
+                    event.setCursor(item);
+
                 }
             }
-        });
-
+        }
     }
     @EventHandler
     public void destroyEntity(PlayerInteractWithEntityEvent evt) {
@@ -235,13 +277,6 @@ public class PlayerListener implements Listener {
     public void dropItem(PlayerDropItemEvent evt) {
         PortalStick.getInstance().getUser(evt.getPlayer().getName()).addItem(evt.getItemDrop());
     }
-    @EventHandler
-    public void swapHands(PlayerSwapHandItemsEvent evt) {
-        if (Util.isPortalGun(evt.getOffHandItem())) {
-            evt.setCancelled(true);
-            PortalStick.getInstance().getUser(evt.getPlayer().getName()).removeAllPortals();
-        }
-    }
 
     @SuppressWarnings("deprecation")
     @EventHandler
@@ -255,14 +290,14 @@ public class PlayerListener implements Listener {
         PortalUser user = PortalStick.getInstance().getUser(evt.getPlayer().getName());
         if (!evt.hasItem()) return;
         if (evt.getAction() == Action.RIGHT_CLICK_BLOCK && evt.getItem().getType() == Material.NETHER_FENCE) {
-            new AutomatedPortal(evt.getClickedBlock(), evt.getBlockFace());
+            new AutomatedPortal(evt.getClickedBlock(), evt.getBlockFace(),evt.getPlayer());
             evt.setCancelled(true);
         }
         if (evt.getAction() == Action.RIGHT_CLICK_BLOCK) {
             if (evt.getPlayer().getItemInHand().getType() == Material.REDSTONE) {
                 BlockFace clicked = evt.getBlockFace();
                 if (clicked != BlockFace.UP) {
-                    Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createWire(evt.getClickedBlock(), clicked));
+                    Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createWire(evt.getClickedBlock(), clicked,evt.getPlayer().getLocation().getDirection()));
                     evt.setCancelled(true);
                 }
 
@@ -270,7 +305,7 @@ public class PlayerListener implements Listener {
                 BlockFace clicked = evt.getBlockFace();
                 Wire.WireType type = Wire.WireType.getType(evt.getItem());
                 if (type != null) {
-                    Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createSign(evt.getClickedBlock(), clicked, type));
+                    Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createSign(evt.getClickedBlock(), clicked, type,evt.getPlayer().getLocation().getDirection()));
                     evt.setCancelled(true);
                 }
             }
@@ -280,6 +315,7 @@ public class PlayerListener implements Listener {
 
         PortalStick plugin = PortalStick.getInstance();
         if (user.isUsingTool() && evt.getPlayer().getItemInHand().getTypeId() == plugin.getConfiguration().RegionTool) {
+
             switch (evt.getAction()) {
                 case RIGHT_CLICK_BLOCK:
                     user.setPointTwo(new V10Block(evt.getClickedBlock()));
@@ -365,7 +401,6 @@ public class PlayerListener implements Listener {
         if (evt.getItem().getType() == Material.FLINT_AND_STEEL) {
             if (evt.getAction() == Action.RIGHT_CLICK_BLOCK) {
                 if (evt.getClickedBlock().getType() == Material.STAINED_GLASS_PANE && evt.getClickedBlock().getData() == (byte) 0) {
-                    //Is there a laser at that spot??
                     if (Util.retrieveMetadata(evt.getClickedBlock(), 2, Laser.class) == null) {
                         PortalStick.getInstance().getLaserManager().createLaser(new V10Block(evt.getClickedBlock()));
                         PortalStick.getInstance().getConfiguration().saveAll();
@@ -376,7 +411,7 @@ public class PlayerListener implements Listener {
                     PortalStick.getInstance().getBridgeManager().createBridge(evt.getClickedBlock());
                 }
                 if (evt.getClickedBlock().getType() != Material.MOSSY_COBBLESTONE) return;
-                Grill grill = new Grill(evt.getClickedBlock());
+                Grill grill = new Grill(new V10Block(evt.getClickedBlock()));
                 if (grill.isComplete()) {
                     evt.setCancelled(true);
                     PortalStick.getInstance().getConfiguration().saveAll();
@@ -384,29 +419,43 @@ public class PlayerListener implements Listener {
             }
         }
 
-        if (!Util.isPortalGun(evt.getItem()) || !Cooldown.tryCooldown(evt.getPlayer(), "portalplace", 50)) return;
-        if (evt.getAction() == Action.LEFT_CLICK_BLOCK && !Util.isTranslucent(evt.getClickedBlock().getType())) {
-            boolean success = user.setPrimary(evt.getClickedBlock(), FaceUtil.faceToVector(evt.getBlockFace()));
-            if (success) evt.setCancelled(true);
-            if (!success) evt.getPlayer().sendMessage(ChatColor.RED + "Unable to place portal there!");
-        } else if (evt.getAction() == Action.RIGHT_CLICK_BLOCK && !Util.isTranslucent(evt.getClickedBlock().getType())) {
-            boolean success = user.setSecondary(evt.getClickedBlock(), FaceUtil.faceToVector(evt.getBlockFace()));
-            if (success) evt.setCancelled(true);
-            if (!success) evt.getPlayer().sendMessage(ChatColor.RED + "Unable to place portal there!");
-        } else if (evt.getAction() == Action.LEFT_CLICK_AIR || (evt.getAction() == Action.LEFT_CLICK_BLOCK && Util.isTranslucent(evt.getClickedBlock().getType()))) {
-            List<Block> b = evt.getPlayer().getLastTwoTargetBlocks(transparent, 100);
-            boolean success = b.size() == 2;
-            if (success)
-                success = user.setPrimary(b.get(1), b.get(0).getLocation().toVector().subtract(b.get(1).getLocation().toVector()));
-            if (success) evt.setCancelled(true);
-            if (!success) evt.getPlayer().sendMessage(ChatColor.RED + "Unable to place portal there!");
-        } else if (evt.getAction() == Action.RIGHT_CLICK_AIR || (evt.getAction() == Action.RIGHT_CLICK_BLOCK && Util.isTranslucent(evt.getClickedBlock().getType()))) {
-            List<Block> b = evt.getPlayer().getLastTwoTargetBlocks(transparent, 100);
-            boolean success = b.size() == 2;
-            if (success)
-                success = user.setSecondary(b.get(1), b.get(0).getLocation().toVector().subtract(b.get(1).getLocation().toVector()));
-            if (success) evt.setCancelled(true);
-            if (!success) evt.getPlayer().sendMessage(ChatColor.RED + "Unable to place portal there!");
+        if (!Util.isPortalGun(evt.getItem()) || !player.hasPermission(PortalStick.PERM_PLACE_PORTAL)) return;
+        evt.setCancelled(true);
+        if (!Cooldown.tryCooldown(evt.getPlayer(), "portalplace", 50)) return;
+        boolean pri = evt.getAction().name().contains("LEFT");
+        boolean far = evt.getAction().name().contains("AIR") || Util.isTranslucent(evt.getClickedBlock().getType());
+        List<Block> targetBlocks = evt.getPlayer().getLineOfSight(transparent, 120);
+        for (Block b: targetBlocks) {
+            Optional<Entity> e = b.getWorld().getNearbyEntities(b.getLocation(),0.5,0.5,0.5).stream().filter(en -> Util.checkInstance(Grill.class,en)).findFirst();
+            if (e.isPresent()) {
+                //TODO: Change grill textures, add some way to make them flash
+                //Util.getInstance(Grill.class,e.get()).flash();
+                LocationIterator it = new LocationIterator(evt.getPlayer().getWorld(),evt.getPlayer().getEyeLocation().add(0,-0.15,0).toVector(),evt.getPlayer().getLocation().getDirection().multiply(0.2), (int)(evt.getPlayer().getEyeLocation().distance(e.get().getLocation())/0.2));
+                while(it.hasNext()) {
+                    Particles.REDSTONE.display(new Particles.OrdinaryColor(pri ? 0 : 255, pri ? 255 - 140 : 150, pri ? 255 : 0), it.next(), evt.getPlayer());
+                }
+                Util.playSoundTo(Sound.PORTAL_CANNOT_CREATE, player);
+                return;
+            }
+        }
+        List<Block> b = evt.getPlayer().getLastTwoTargetBlocks(transparent, 100);
+        Block clicked = far?(b.size()==2?b.get(1):b.get(0)):evt.getClickedBlock();
+        LocationIterator it = new LocationIterator(evt.getPlayer().getWorld(),evt.getPlayer().getEyeLocation().add(0,-0.15,0).toVector(),evt.getPlayer().getLocation().getDirection().multiply(0.2), (int)(evt.getPlayer().getEyeLocation().distance(clicked.getLocation())/0.2));
+        while(it.hasNext()) {
+            Particles.REDSTONE.display(new Particles.OrdinaryColor(pri ? 0 : 255, pri ? 255 - 140 : 150, pri ? 255 : 0), it.next(), evt.getPlayer());
+        }
+        boolean success = false;
+
+        if (!far || b.size() == 2) {
+            Vector dir = FaceUtil.faceToVector(evt.getBlockFace());
+            if (far) dir = b.get(0).getLocation().toVector().subtract(b.get(1).getLocation().toVector());
+            if (pri) success = user.setPrimary(clicked, dir, evt.getPlayer());
+            else success = user.setSecondary(clicked, dir, evt.getPlayer());
+        }
+        if (!success) {
+            Util.playSoundTo(Sound.PORTAL_CANNOT_CREATE, player);
+        } else {
+            Util.playSound(pri?Sound.PORTAL_CREATE_BLUE:Sound.PORTAL_CREATE_ORANGE,new V10Block(player.getLocation()));
         }
     }
 }

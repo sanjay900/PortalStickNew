@@ -11,6 +11,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.Sign;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
@@ -18,7 +19,7 @@ import org.bukkit.material.MaterialData;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.EulerAngle;
-
+import org.bukkit.util.Vector;
 import lombok.NoArgsConstructor;
 import net.tangentmc.nmsUtils.entities.NMSArmorStand;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
@@ -39,12 +40,12 @@ public class Wire implements MetadataSaver {
     PortalStick plugin;
     public HashSet<Wire> source = new HashSet<>();
     public HashSet<Wire> signsource = new HashSet<>();
-    public Wire(Block block, BlockFace clicked,WireType type,PortalStick stick) {
+    public Wire(Block block, BlockFace clicked,WireType type,PortalStick stick, Vector direction) {
         this.plugin = stick;
         this.type = type;
         facing = clicked;
         this.loc = new V10Block(block.getRelative(clicked));
-        this.stand = (ArmorStand) block.getWorld().spawnEntity(rotate(loc.getHandle().getBlock().getLocation()).add(0.5, -0.94, 0.5), EntityType.ARMOR_STAND);
+        this.stand = (ArmorStand) block.getWorld().spawnEntity(rotate(loc.getHandle().getBlock().getLocation(),direction).add(0.5, -0.94, 0.5), EntityType.ARMOR_STAND);
         NMSArmorStand.wrap(stand).lock();
         stand.setGravity(false);
         stand.setHelmet(getItemStack());
@@ -59,6 +60,17 @@ public class Wire implements MetadataSaver {
         updateNearby();
         powered = this.hasPoweredSource();
         orient();
+        if (type == WireType.timer) {
+            initTimer();
+        }
+    }
+    public Location rotate(Location loc, Vector entityDirection) {
+        if (FaceUtil.isVertical(facing) && isSign()) {
+            loc.setDirection(FaceUtil.faceToVector(FaceUtil.getDirection(entityDirection.setY(0),false)));
+        } else {
+            loc.setDirection(FaceUtil.faceToVector(facing.getOppositeFace()));
+        }
+        return loc;
     }
     public Wire(ArmorStand en,PortalStick stick) {
         this.plugin = stick;
@@ -69,20 +81,13 @@ public class Wire implements MetadataSaver {
         type = WireType.getType(stand.getHelmet());
         if (stand.getHeadPose().getX()==0) {
             facing = BlockFace.DOWN;
-        } else if (stand.getHeadPose().getX()==Math.toRadians(270)) {
+        } else if (stand.getHeadPose().getX()==Math.toRadians(180)) {
             facing = BlockFace.UP;
         } else {
             facing = FaceUtil.getDirection(en.getLocation().getDirection()).getOppositeFace();
         }
         if (type == null) return;
         powered = type.getState(stand.getHelmet().getData());
-        //TODO: we could use entity nbt data for this
-        if (en.getCustomName().contains("wiret")) {
-            String time = en.getCustomName().replace("wiret", "");
-            if (!time.isEmpty()) {
-                this.timerSeconds = Integer.parseInt(time);
-            }
-        }
         if (type == WireType.timer) {
             this.source.add(this);
             initTimer();
@@ -112,10 +117,6 @@ public class Wire implements MetadataSaver {
     public Set<Wire> getRelated() {
         return plugin.getWireManager().getNearbyWire(this);
     }
-    public Location rotate(Location loc) {
-        loc.setDirection(FaceUtil.faceToVector(facing.getOppositeFace()));
-        return loc;
-    }
     public void setPowered(boolean powered, PoweredReason reason) {
         if (powered) {
             this.reason = reason;
@@ -134,7 +135,6 @@ public class Wire implements MetadataSaver {
         this.source.removeAll(this.source.stream().filter(s -> !s.powered).collect(Collectors.toList()));
         return !this.source.isEmpty();
     }
-    static BlockFace[] check = new BlockFace[]{BlockFace.NORTH,BlockFace.SOUTH,BlockFace.EAST,BlockFace.WEST,BlockFace.UP,BlockFace.DOWN};
     public boolean hasPower() {
         Block blk = getSupport();
         boolean pow = blk.isBlockPowered();
@@ -144,7 +144,7 @@ public class Wire implements MetadataSaver {
             if (loc.getHandle().getBlock().getRelative(BlockFace.DOWN,2).getType() == Material.LEVER) {
                 return false;
             }
-            for (BlockFace b: check) {
+            for (BlockFace b: FaceUtil.BLOCK_SIDES) {
                 if (loc.getHandle().getBlock().isBlockFacePowered(b)||loc.getHandle().getBlock().isBlockFaceIndirectlyPowered(b)) {
                     if (loc.getHandle().getBlock().getRelative(b.getOppositeFace()).getRelative(BlockFace.DOWN,2).getType() == Material.LEVER) {
                         return false;
@@ -195,6 +195,9 @@ public class Wire implements MetadataSaver {
     public boolean isIndicatorWire() {
         return (type == WireType.WIRE||type == WireType.timer||type == WireType.INDICATOR);
     }
+    public boolean isSign() {
+        return (type == WireType.timer||type == WireType.INDICATOR||type.name().startsWith("dots")||type.name().startsWith("shape"));
+    }
     public void remove() {
         stand.remove();
         plugin.getWireManager().wiresupport.get(new V10Block(this.getSupport())).remove(this);
@@ -204,11 +207,14 @@ public class Wire implements MetadataSaver {
     private ItemStack getItemStack() {
         if (type == WireType.timer) {
             if (timerState == -1) {
-                //Forgot about this.. bit late now, lets use 85
-                return new ItemStack(Material.DIAMOND_HOE,1,(short)85);
+                return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)WireType.timer.off));
             }
             //The hoe indexes start at 1, not 0
-            return new ItemStack(Material.DIAMOND_HOE,1,(short)(timerState+1));
+            return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)(timerState+1)));
+        }
+        if (type==WireType.INDICATOR) {
+            getSupport().getRelative(facing.getOppositeFace()).setType(powered?Material.REDSTONE_BLOCK:Material.AIR);
+            getSupport().getRelative(facing.getOppositeFace()).getState().update();
         }
         if (type == WireType.WIRE){
             Set<BlockFace> directions = plugin.getWireManager().getConnections(this);
@@ -217,54 +223,27 @@ public class Wire implements MetadataSaver {
             boolean right = false;
             boolean up = false;
             boolean down = false;
-            for (BlockFace b: directions) {
-                if (ceil) {
-                    if (b == BlockFace.WEST) right = true;
-                    if (b == BlockFace.EAST) left = true;
-                } else {
-                    if (!right && FaceUtil.rotate(facing, -2) == b) right = true;
-                    if (!left && FaceUtil.rotate(facing, 2) == b) left = true;
-                }
-                if (b == BlockFace.UP || ceil && b == BlockFace.NORTH) up = true;
-                if (b == BlockFace.DOWN || ceil && b == BlockFace.SOUTH) down = true;
-            }
-            if (!ceil) {
-                //redstone wire inside corner
-                if (loc.getHandle().getBlock().getType() == Material.REDSTONE_WIRE) down = true;
-                if (canConnect(getSupport().getRelative(BlockFace.DOWN).getType())||
-                        canConnect(getSupport().getRelative(facing).getRelative(BlockFace.DOWN).getType()))
-                    down = true;
-                if (canConnect(getSupport().getRelative(BlockFace.UP).getType())||
-                        canConnect(getSupport().getRelative(facing).getRelative(BlockFace.UP).getType()))
-                    up = true;
-                if (canConnect(getSupport().getRelative(FaceUtil.rotate(facing, -2)).getType())||
-                        canConnect(getSupport().getRelative(facing).getRelative(FaceUtil.rotate(facing, -2)).getType()))
-                    right = true;
-                if (canConnect(getSupport().getRelative(FaceUtil.rotate(facing, 2)).getType())||
-                        canConnect(getSupport().getRelative(facing).getRelative(FaceUtil.rotate(facing, 2)).getType()))
-                    left = true;
 
+            if (ceil) {
+                if (canConnect(BlockFace.SOUTH) || directions.contains(BlockFace.SOUTH)) down = true;
+                if (canConnect(BlockFace.NORTH) || directions.contains(BlockFace.NORTH)) up = true;
+                if (canConnect(BlockFace.WEST) || directions.contains(BlockFace.WEST)) right = true;
+                if (canConnect(BlockFace.EAST)|| directions.contains(BlockFace.EAST)) left = true;
             } else {
-                if (canConnect(getSupport().getRelative(BlockFace.SOUTH).getType())||
-                        canConnect(getSupport().getRelative(facing).getRelative(BlockFace.SOUTH).getType()))
-                    down = true;
-                if (canConnect(getSupport().getRelative(BlockFace.NORTH).getType())||
-                        canConnect(getSupport().getRelative(facing).getRelative(BlockFace.NORTH).getType()))
-                    up = true;
-                if (canConnect(getSupport().getRelative(BlockFace.WEST).getType())||
-                        canConnect(getSupport().getRelative(facing).getRelative(BlockFace.WEST).getType()))
+                if (loc.getHandle().getBlock().getType() == Material.REDSTONE_WIRE
+                        || canConnect(BlockFace.DOWN) || directions.contains(BlockFace.DOWN)) down = true;
+                if (directions.contains(BlockFace.UP) || canConnect(BlockFace.UP)) up = true;
+                if (canConnect(FaceUtil.rotate(facing, -2)) || directions.contains(FaceUtil.rotate(facing, -2)))
                     right = true;
-                if (canConnect(getSupport().getRelative(BlockFace.EAST).getType())||
-                        canConnect(getSupport().getRelative(facing).getRelative(BlockFace.EAST).getType()))
+                if (canConnect(FaceUtil.rotate(facing, 2)) || directions.contains(FaceUtil.rotate(facing, 2)))
                     left = true;
-            }
-            if (facing != BlockFace.UP) {
-                for (BlockFace b: check) {
+                for (BlockFace b : FaceUtil.BLOCK_SIDES) {
                     if (b == facing || b == facing.getOppositeFace()) continue;
                     if (canConnect(getSupport().getRelative(b).getType()) && getSupport().getRelative(b).getType() != Material.REDSTONE_WIRE) {
-                        getSupport().getRelative(b).getRelative(facing.getOppositeFace()).setType(powered?Material.REDSTONE_BLOCK:Material.AIR);
+                        getSupport().getRelative(b).getRelative(facing.getOppositeFace()).setType(powered ? Material.REDSTONE_BLOCK : Material.AIR);
                         getSupport().getRelative(b).getRelative(facing.getOppositeFace()).getState().update();
                     }
+
                 }
             }
 
@@ -272,6 +251,10 @@ public class Wire implements MetadataSaver {
 
         }
         return type.getWireType(powered);
+    }
+    public boolean canConnect(BlockFace dir) {
+        return canConnect(getSupport().getRelative(dir).getType())||
+                canConnect(getSupport().getRelative(facing).getRelative(dir).getType());
     }
     public boolean canConnect(Material mt) {
         switch (mt) {
@@ -360,15 +343,17 @@ public class Wire implements MetadataSaver {
             this.off = on;
         }
         public ItemStack getWireType(boolean powered) {
-            return new ItemStack(Material.DIAMOND_HOE,1,(short)(powered?on:off));
+            if (this == WireType.WIRE) return new ItemStack(Material.REDSTONE);
+            return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)(powered?on:off)));
         }
         public boolean getState(MaterialData mt) {
             return on == mt.getData();
         }
         public static WireType getType(ItemStack mt) {
             if (mt.getType() != Material.DIAMOND_HOE) return null;
+            if (mt.getDurability() < 10) return WireType.timer;
             for (WireType t:WireType.values()) {
-                if ((byte)t.on == mt.getData().getData() || (byte)t.off == mt.getData().getData()) {
+                if ((short)t.on == mt.getDurability() || (short)t.off == mt.getDurability()) {
                     if (t == DOT || t.name().contains("LEFT")|| t.name().contains("UP")|| t.name().contains("RIGHT")|| t.name().contains("DOWN")) {
                         return WireType.WIRE;
                     }
@@ -381,7 +366,6 @@ public class Wire implements MetadataSaver {
     public BukkitTask timer;
     public BukkitTask soundTimer;
     public int timerState;
-    public int timerSeconds = 8;
     public void initTimer() {
         timerState = -1;
         orient();
@@ -392,6 +376,12 @@ public class Wire implements MetadataSaver {
         initTimer();
         timerState = 8;
         orient();
+        int timerSeconds = 8;
+        Block sign = getSupport().getRelative(facing.getOppositeFace());
+        if (sign.getType() == Material.WALL_SIGN) {
+            Sign s = (Sign) sign.getState();
+            timerSeconds = Integer.parseInt(s.getLine(0));
+        }
         timer = Bukkit.getScheduler().runTaskTimer(plugin, this::decreaseTimer,(long) ((timerSeconds/8d)*20),(long) ((timerSeconds/8d)*20));
         soundTimer = Bukkit.getScheduler().runTaskTimer(plugin, () -> Util.playSound(Sound.TICK_TOCK, new V10Block(stand.getLocation())), 1l, 20l);
 

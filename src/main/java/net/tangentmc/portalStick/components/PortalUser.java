@@ -3,10 +3,14 @@ package net.tangentmc.portalStick.components;
 import lombok.Getter;
 import lombok.Setter;
 import net.tangentmc.nmsUtils.utils.V10Block;
+import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.Config.Sound;
+import net.tangentmc.portalStick.utils.RegionSetting;
 import net.tangentmc.portalStick.utils.Util;
 import org.bukkit.Bukkit;
+import org.bukkit.DyeColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
@@ -24,6 +28,7 @@ public class PortalUser {
     Portal secondary;
     Cube cube;
     ItemStack previous;
+    boolean upgradedGun = true;
     public PortalUser(String owner) {
         this.owner = owner;
     }
@@ -36,21 +41,30 @@ public class PortalUser {
         return cube != null;
     }
 
-    public boolean setPrimary(Block block, Vector vector) {
-        if (this.primary != null) {
-            this.primary.close();
-            this.primary.delete();
-        }
-        this.primary = new Portal(owner, vector, block, true);
-        if (this.primary.isFinished()) {
-            Util.playSound(Sound.PORTAL_CREATE_BLUE, new V10Block(block));
-            this.primary.open();
-            if (this.secondary != null) {
-                this.secondary.open();
+    public boolean setPrimary(Block block, Vector vector, Entity en) {
+        Region r = PortalStick.getInstance().getRegionManager().getRegion(new V10Block(block));
+        if (!isRegion()&&(!r.getBoolean(RegionSetting.ENABLE_BLUE_PORTALS))) return false;
+        Location loc = en.getLocation();
+        loc.setPitch(0);
+        Portal tmp = new Portal(owner, vector, block, true, loc.getDirection());
+        if (tmp.isFinished()) {
+            //Close region portals if they exist
+            //getPri will either point to a region or a user portal, but both could exist.
+            if (this.getPrimary() != null) {
+                this.getPrimary().delete();
             }
+            r.getPortals(true).forEach(Portal::delete);
+            this.primary = tmp;
+            this.primary.open();
+            if (this.getSecondary() != null) {
+                this.getSecondary().open();
+            } else if (r.getSecondary() != null) {
+                r.getSecondary().open();
+            }
+            setCrosshair();
             return true;
-        } else
-            this.primary = null;
+        }
+        setCrosshair();
         return false;
     }
 
@@ -59,25 +73,61 @@ public class PortalUser {
         if (this.primary != null) this.primary.delete();
         this.secondary = null;
         this.primary = null;
+        setCrosshair();
+    }
+    public boolean setSecondary(Block block, Vector vector, Entity en) {
+        Region r = PortalStick.getInstance().getRegionManager().getRegion(new V10Block(block));
+        if (!isRegion()&&(!r.getBoolean(RegionSetting.ENABLE_BLUE_PORTALS) || !upgradedGun)) return false;
 
+        Location loc = en.getLocation();
+        loc.setPitch(0);
+        Portal tmp = new Portal(owner, vector, block, false, loc.getDirection());
+        if (tmp.isFinished()) {
+            //Close region portals if they exist
+            if (this.getSecondary() != null) {
+                this.getSecondary().delete();
+            }
+            r.getPortals(false).forEach(Portal::delete);
+            this.secondary = tmp;
+            this.secondary.open();
+            if (this.getPrimary() != null) {
+                this.getPrimary().open();
+            } else if (r.getPrimary() != null) {
+                r.getPrimary().open();
+            }
+
+            setCrosshair();
+            return true;
+        }
+        setCrosshair();
+        return false;
     }
 
-    public boolean setSecondary(Block block, Vector vector) {
-        if (this.secondary != null) {
-            this.secondary.close();
-            this.secondary.delete();
-        }
-        this.secondary = new Portal(owner, vector, block, false);
-        if (this.secondary.isFinished()) {
-            this.secondary.open();
-            Util.playSound(Sound.PORTAL_CREATE_ORANGE, new V10Block(block));
+    public void setCrosshair() {
+        if (isRegion()) return;
+        Region r = PortalStick.getInstance().getRegionManager().getRegion(new V10Block(Bukkit.getPlayer(owner).getLocation()));
+        ItemStack is;
+        if (!Bukkit.getPlayer(owner).getInventory().contains(Util.createPortalGun())) {
+            is = new ItemStack(Material.AIR);
+        } else if (!r.getBoolean(RegionSetting.ENABLE_ORANGE_PORTALS) || !upgradedGun){
+            upgradedGun = false;
             if (this.primary != null) {
-                this.primary.open();
+                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)91));
+            } else {
+                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)90));
             }
-            return true;
-        } else
-            this.secondary = null;
-        return false;
+        } else {
+            if (this.primary != null && this.secondary != null) {
+                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)89));
+            } else if (this.primary != null) {
+                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)87));
+            } else if (this.secondary != null) {
+                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)88));
+            } else {
+                is = Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1, (short)86));
+            }
+        }
+        Bukkit.getPlayer(owner).getInventory().setItemInOffHand(is);
     }
 
     List<Item> items = new ArrayList<>();
@@ -97,11 +147,6 @@ public class PortalUser {
         if (hasCube()) {
             this.cube.respawn();
         }
-    }
-
-    public void removeAllPortals() {
-        if (primary != null) primary.delete();
-        if (secondary != null) secondary.delete();
     }
 
     int currentAmt = 4;
