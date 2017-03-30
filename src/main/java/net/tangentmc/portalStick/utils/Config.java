@@ -243,13 +243,13 @@ public class Config {
 		if(textureURL == null) {
 			if(save)
 				mainConfig.set("texture.use-custom-texture", true);
-			textureURL = getString("texture.custom-URL", "http://tangentnetwork.tk/resourcepacks/Portal.zip");
+			textureURL = getString("texture.custom-URL", "http://tangentmc.net/resourcepacks/Portal.zip");
 		} else {
 			if(save)
 				mainConfig.set("texture.use-custom-texture", false);
 			textureURL = null;
 		}
-		defaultTextureURL = getString("texture.default-URL", "http://tangentnetwork.tk/resourcepacks/default.zip");
+		defaultTextureURL = getString("texture.default-URL", "http://tangentmc.net/resourcepacks/default.zip");
 		if(save)
 			saveAll();
 		return textureURL != null;
