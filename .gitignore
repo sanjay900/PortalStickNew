@@ -11,7 +11,6 @@
 hs_err_pid*
 
 .idea/workspace.xml
-src/test/
 target/
 dependency-reduced-pom.xml
 ### JetBrains template

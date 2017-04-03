@@ -1,6 +1,6 @@
 name: PortalStick
 main: net.tangentmc.portalStick.PortalStick
-version: ${project.version}
+version: @version@
 authors: [matejdro, oliverw92, V10lator, sanjay900]
 softdepend: [WorldGuard]
 depend: [ProtocolLib, nmsUtils]

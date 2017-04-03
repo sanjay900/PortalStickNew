@@ -1,3 +1,4 @@
+import org.apache.tools.ant.filters.ReplaceTokens
 plugins {
     id 'com.github.johnrengelman.shadow' version '1.2.4'
 }
@@ -6,7 +7,7 @@ apply plugin: 'maven'
 shadowJar {
     baseName = 'PortalStick'
     classifier = null
-    destinationDir = new File("")
+    destinationDir = new File(".")
 }
 
 group = 'net.tangentmc'
@@ -38,3 +39,12 @@ dependencies {
         exclude(module: 'spigot-api')
     }
 }
+task updateVersion(type: Copy) {
+    from 'src/main/resources/'
+    into 'build/resources/main/'
+    filter(ReplaceTokens, tokens: [version: project.version])
+}
+
+build.dependsOn updateVersion
+jar.dependsOn updateVersion
+assemble.dependsOn shadowJar
