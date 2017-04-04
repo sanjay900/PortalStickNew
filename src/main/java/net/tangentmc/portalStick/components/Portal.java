@@ -522,6 +522,7 @@ public class Portal implements MetadataSaver {
         return "portalobj";
     }
     public boolean isAngled() {
+        System.out.println(facing);
         return (facing.getX() != 0 || facing.getZ() != 0) && facing.getY() == 1;
     }
     public boolean isVertical() {

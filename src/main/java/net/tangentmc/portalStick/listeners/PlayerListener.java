@@ -303,7 +303,7 @@ public class PlayerListener implements Listener {
                 }
 
             } else {
-                if (evt.getItem().hasItemMeta() && !evt.getItem().getItemMeta().getItemFlags().contains(ItemFlag.HIDE_UNBREAKABLE) && evt.getItem().getItemMeta().spigot().isUnbreakable()) {
+                if (evt.getItem().hasItemMeta() && !evt.getItem().getItemMeta().getItemFlags().contains(ItemFlag.HIDE_UNBREAKABLE)) {
                     BlockFace clicked = evt.getBlockFace();
                     Wire.WireType type = Wire.WireType.getType(evt.getItem());
                     if (type != null) {
