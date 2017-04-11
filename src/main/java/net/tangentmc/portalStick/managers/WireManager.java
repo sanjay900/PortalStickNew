@@ -30,7 +30,7 @@ public class WireManager {
     public final HashMap<V10Block,ArrayList<Wire>> wiresupport = new HashMap<>();
     public final HashMap<V10Block,ArrayList<Wire>> wireloc = new HashMap<>();
     public void loadAllWire() {
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> wiresupport.values().forEach(w2 -> w2.forEach(Wire::update)), 1l, 1l);
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> new ArrayList<>(wiresupport.values()).forEach(w2 -> new ArrayList<>(w2).forEach(Wire::update)), 1L, 1L);
         Bukkit.getWorlds().forEach(this::loadWorld);
         wiresupport.values().forEach(w2 -> w2.forEach(Wire::orient));
     }
@@ -46,7 +46,6 @@ public class WireManager {
                     wireloc.get(w2.loc).add(w2);
                 }
                 if (en.getCustomName() != null && en.getCustomName().equals(new AutomatedPortal().getMetadataName())) {
-                    System.out.print(en);
                     new AutomatedPortal((ArmorStand) en);
                 }
             }

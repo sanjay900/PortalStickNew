@@ -311,8 +311,7 @@ public class Config {
 	{
 		if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdir();
 
-		File file = new File(plugin.getDataFolder(), filename);
-		return file;
+		return new File(plugin.getDataFolder(), filename);
 	}
 	private FileConfiguration getConfig(File file) {
 		FileConfiguration config;
