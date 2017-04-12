@@ -288,20 +288,17 @@ public class Util {
 				as.setMetadata("pistonen", new FixedMetadataValue(PortalStick.getInstance(),true));
 				final V10Block loc = new V10Block(sBlock);
 				Bukkit.getScheduler().scheduleSyncDelayedTask(
-						plugin, new Runnable() {
-							@Override
-							public void run() {
-								Block block = loc.getHandle().getBlock();
-								Sign s = (Sign) block.getState();
-								block.setType(
-										Material.REDSTONE_BLOCK);
-								Bukkit.getScheduler()
-								.scheduleSyncDelayedTask(
-										plugin,
-										new SignResetter(s),
-										2L);
-							}
-						}, 2L);
+						plugin, () -> {
+                            Block block = loc.getHandle().getBlock();
+                            Sign s1 = (Sign) block.getState();
+                            block.setType(
+                                    Material.REDSTONE_BLOCK);
+                            Bukkit.getScheduler()
+                            .scheduleSyncDelayedTask(
+                                    plugin,
+                                    new SignResetter(s1),
+                                    2L);
+                        }, 2L);
 
 			}
 			return ok;

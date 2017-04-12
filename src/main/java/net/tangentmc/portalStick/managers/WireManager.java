@@ -207,7 +207,7 @@ public class WireManager {
     }
     public void blockBreak(Block block) {
         if (this.wiresupport.containsKey(new V10Block(block))) {
-            this.wiresupport.get(new V10Block(block)).stream().collect(Collectors.toList()).forEach(Wire::remove);
+            new ArrayList<>(this.wiresupport.get(new V10Block(block))).forEach(Wire::remove);
         }
     }
 
