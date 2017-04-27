@@ -1,10 +1,15 @@
 package net.tangentmc.portalStick.components;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
-import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import net.tangentmc.nmsUtils.NMSUtils;
+import net.tangentmc.nmsUtils.entities.NMSArmorStand;
+import net.tangentmc.nmsUtils.utils.FaceUtil;
+import net.tangentmc.nmsUtils.utils.V10Block;
+import net.tangentmc.portalStick.PortalStick;
+import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.MetadataSaver;
+import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
+import net.tangentmc.portalStick.utils.Util;
 import org.apache.commons.collections4.map.MultiKeyMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -14,21 +19,15 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.material.MaterialData;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
-import lombok.NoArgsConstructor;
-import net.tangentmc.nmsUtils.entities.NMSArmorStand;
-import net.tangentmc.nmsUtils.utils.FaceUtil;
-import net.tangentmc.nmsUtils.utils.V10Block;
-import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
-import net.tangentmc.portalStick.utils.Config.Sound;
-import net.tangentmc.portalStick.utils.Util;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 @NoArgsConstructor
 @Metadata(metadataName = "wireobj")
 public class Wire implements MetadataSaver {
@@ -88,7 +87,7 @@ public class Wire implements MetadataSaver {
             facing = FaceUtil.getDirection(en.getLocation().getDirection()).getOppositeFace();
         }
         if (type == null) return;
-        powered = type.getState(stand.getHelmet().getData());
+        powered = type.getState(stand.getHelmet());
         if (type == WireType.timer) {
             this.source.add(this);
             initTimer();
@@ -208,10 +207,9 @@ public class Wire implements MetadataSaver {
     private ItemStack getItemStack() {
         if (type == WireType.timer) {
             if (timerState == -1) {
-                return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)WireType.timer.off));
+                return WireType.timer8.offStack;
             }
-            //The hoe indexes start at 1, not 0
-            return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)(timerState+1)));
+            return WireType.valueOf("timer"+(timerState+1)).onStack;
         }
         if (type==WireType.INDICATOR) {
             getSupport().getRelative(facing.getOppositeFace()).setType(powered?Material.REDSTONE_BLOCK:Material.AIR);
@@ -326,43 +324,64 @@ public class Wire implements MetadataSaver {
     public enum PoweredReason {
         REDSTONE, WIRE, GRILL
     }
-    @AllArgsConstructor
+    private static final String REDSTONE_PREFIX = "item/redstone/";
+    private static final String WALL_PREFIX = REDSTONE_PREFIX +"wall/";
+    private static final String COUNTDOWN_PREFIX = REDSTONE_PREFIX +"countdown/";
+    private static final String DOTS_PREFIX = REDSTONE_PREFIX+"signage_overlay_dots";
     public enum WireType {
-        WIRE(0),INDICATOR(11,10),DOT(21,21+17),
-        LEFT(22,22+17),UP(23,23+17),RIGHT(24,24+17),
-        DOWN(25,25+17),LEFT_RIGHT(26,26+17),UP_DOWN(27,27+17),
-        LEFT_UP(28,28+17),RIGHT_UP(29,29+17),RIGHT_DOWN(30,30+17),
-        LEFT_DOWN(31,31+17),LEFT_UP_DOWN(32,32+17),LEFT_RIGHT_UP(33,33+17),
-        RIGHT_UP_DOWN(34,34+17),LEFT_RIGHT_DOWN(35,35+17),ALL(36,36+17),
-        dots1(17),dots2(18),dots3(19),dots4(20),
-        shape1(12),shape2(13),shape3(14),shape4(15),shape5(16),
-        timer(85);
-        int off;
-        int on;
-        WireType(int b) {
-            this.on = b;
-            this.off = on;
+        WIRE(WALL_PREFIX +"wire"),INDICATOR(REDSTONE_PREFIX +"indicator_checked", REDSTONE_PREFIX +"indicator_unchecked"),
+        DOT(WALL_PREFIX +"none",true), LEFT(WALL_PREFIX +"l",true),UP(WALL_PREFIX +"u",true),RIGHT(WALL_PREFIX +"r",true),
+        DOWN(WALL_PREFIX +"d",true),LEFT_RIGHT(WALL_PREFIX +"lr",true),UP_DOWN(WALL_PREFIX +"ud",true),
+        LEFT_UP(WALL_PREFIX +"lu",true),RIGHT_UP(WALL_PREFIX +"ru",true),RIGHT_DOWN(WALL_PREFIX +"rd",true),
+        LEFT_DOWN(WALL_PREFIX +"ld",true),LEFT_UP_DOWN(WALL_PREFIX +"lud",true),LEFT_RIGHT_UP(WALL_PREFIX +"lru",true),
+        RIGHT_UP_DOWN(WALL_PREFIX +"rud",true),LEFT_RIGHT_DOWN(WALL_PREFIX +"lrd",true),ALL(WALL_PREFIX +"all",true),
+        dots1(DOTS_PREFIX +"1"),dots2(DOTS_PREFIX +"2"), dots3(DOTS_PREFIX +"3"),dots4(DOTS_PREFIX +"4"),
+        shape1(REDSTONE_PREFIX +"shape01"), shape2(REDSTONE_PREFIX +"shape02"), shape3(REDSTONE_PREFIX +"shape03"),
+        shape4(REDSTONE_PREFIX +"shape04"), shape5(REDSTONE_PREFIX +"shape05"), timer(COUNTDOWN_PREFIX +"on"),
+        timer1(COUNTDOWN_PREFIX +"1"),timer2(COUNTDOWN_PREFIX +"2"), timer3(COUNTDOWN_PREFIX +"3"),
+        timer4(COUNTDOWN_PREFIX +"4"),timer5(COUNTDOWN_PREFIX +"5"), timer6(COUNTDOWN_PREFIX +"6"),
+        timer7(COUNTDOWN_PREFIX +"7"),timer8(COUNTDOWN_PREFIX +"8");
+        String off;
+        String on;
+        //Looking up this data is expensive, so lets cache it.
+        ItemStack onStack;
+        ItemStack offStack;
+        WireType(String on, String off) {
+            this.on = on;
+            this.off = off;
+            this.onStack = NMSUtils.getInstance().getResourcePackAPI().getItemStack(on);
+            this.offStack = NMSUtils.getInstance().getResourcePackAPI().getItemStack(off);
+        }
+        WireType(String base, boolean b) {
+            this(base+"_on",base);
+        }
+        WireType(String b) {
+            this(b,b);
         }
         public ItemStack getWireType(boolean powered) {
             if (this == WireType.WIRE) return new ItemStack(Material.REDSTONE);
-            return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)(powered?on:off)));
+            return powered?onStack:offStack;
         }
-        public boolean getState(MaterialData mt) {
-            return on == mt.getData();
+        public boolean getState(ItemStack mt) {
+            return compareStack(onStack,mt);
         }
         public static WireType getType(ItemStack mt) {
-            if (mt.getType() != Material.DIAMOND_HOE) return null;
-            if (mt.getDurability() < 10) return WireType.timer;
             for (WireType t:WireType.values()) {
-                if ((short)t.on == mt.getDurability() || (short)t.off == mt.getDurability()) {
+                if (compareStack(t.onStack,mt) || compareStack(t.offStack,mt)) {
                     if (t == DOT || t.name().contains("LEFT")|| t.name().contains("UP")|| t.name().contains("RIGHT")|| t.name().contains("DOWN")) {
                         return WireType.WIRE;
+                    }
+                    if (t.name().contains("timer")) {
+                        return WireType.timer;
                     }
                     return t;
                 }
             }
             return null;
         }
+    }
+    private static boolean compareStack(ItemStack o, ItemStack t) {
+        return o.getDurability() == t.getDurability() && o.getType() == t.getType();
     }
     public BukkitTask timer;
     public BukkitTask soundTimer;
