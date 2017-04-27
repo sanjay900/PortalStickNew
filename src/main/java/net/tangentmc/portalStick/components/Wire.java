@@ -19,6 +19,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
@@ -60,7 +61,7 @@ public class Wire implements MetadataSaver {
         updateNearby();
         powered = this.hasPoweredSource();
         orient();
-        if (type == WireType.timer) {
+        if (type == WireType.TIMER) {
             initTimer();
         }
     }
@@ -88,7 +89,7 @@ public class Wire implements MetadataSaver {
         }
         if (type == null) return;
         powered = type.getState(stand.getHelmet());
-        if (type == WireType.timer) {
+        if (type == WireType.TIMER) {
             this.source.add(this);
             initTimer();
         }
@@ -164,12 +165,12 @@ public class Wire implements MetadataSaver {
                 w.setPowered(this);
             }
         } else if(this.hasPower() || reason == PoweredReason.GRILL){
-            source.stream().filter(w -> w.type == WireType.timer).forEach(w -> {
+            source.stream().filter(w -> w.type == WireType.TIMER).forEach(w -> {
                 w.source.add(this);
                 w.decreaseTimer();
             });
         }
-        if (this.type == WireType.timer && powered) {
+        if (this.type == WireType.TIMER && powered) {
             this.reason = PoweredReason.WIRE;
             this.source.add(this);
             this.source.stream().filter(w -> w != this).forEach(w -> w.source.add(this));
@@ -193,10 +194,10 @@ public class Wire implements MetadataSaver {
         });
     }
     public boolean isIndicatorWire() {
-        return (type == WireType.WIRE||type == WireType.timer||type == WireType.INDICATOR);
+        return (type == WireType.WIRE||type == WireType.TIMER ||type == WireType.INDICATOR);
     }
     public boolean isSign() {
-        return (type == WireType.timer||type == WireType.INDICATOR||type.name().startsWith("dots")||type.name().startsWith("shape"));
+        return (type == WireType.TIMER ||type == WireType.INDICATOR||type.name().startsWith("dots")||type.name().startsWith("shape"));
     }
     public void remove() {
         stand.remove();
@@ -205,11 +206,11 @@ public class Wire implements MetadataSaver {
         plugin.getWireManager().getNearbyWire(this.loc).forEach(Wire::orient);
     }
     private ItemStack getItemStack() {
-        if (type == WireType.timer) {
-            if (timerState == -1) {
-                return WireType.timer8.offStack;
+        if (type == WireType.TIMER) {
+            if (timerState < 1) {
+                return WireType.TIMER.offStack;
             }
-            return WireType.valueOf("timer"+(timerState+1)).onStack;
+            return WireType.valueOf("timer"+timerState).onStack;
         }
         if (type==WireType.INDICATOR) {
             getSupport().getRelative(facing.getOppositeFace()).setType(powered?Material.REDSTONE_BLOCK:Material.AIR);
@@ -337,7 +338,7 @@ public class Wire implements MetadataSaver {
         RIGHT_UP_DOWN(WALL_PREFIX +"rud",true),LEFT_RIGHT_DOWN(WALL_PREFIX +"lrd",true),ALL(WALL_PREFIX +"all",true),
         dots1(DOTS_PREFIX +"1"),dots2(DOTS_PREFIX +"2"), dots3(DOTS_PREFIX +"3"),dots4(DOTS_PREFIX +"4"),
         shape1(REDSTONE_PREFIX +"shape01"), shape2(REDSTONE_PREFIX +"shape02"), shape3(REDSTONE_PREFIX +"shape03"),
-        shape4(REDSTONE_PREFIX +"shape04"), shape5(REDSTONE_PREFIX +"shape05"), timer(COUNTDOWN_PREFIX +"on"),
+        shape4(REDSTONE_PREFIX +"shape04"), shape5(REDSTONE_PREFIX +"shape05"), TIMER(COUNTDOWN_PREFIX +"off"),
         timer1(COUNTDOWN_PREFIX +"1"),timer2(COUNTDOWN_PREFIX +"2"), timer3(COUNTDOWN_PREFIX +"3"),
         timer4(COUNTDOWN_PREFIX +"4"),timer5(COUNTDOWN_PREFIX +"5"), timer6(COUNTDOWN_PREFIX +"6"),
         timer7(COUNTDOWN_PREFIX +"7"),timer8(COUNTDOWN_PREFIX +"8");
@@ -365,14 +366,15 @@ public class Wire implements MetadataSaver {
         public boolean getState(ItemStack mt) {
             return compareStack(onStack,mt);
         }
-        public static WireType getType(ItemStack mt) {
+        public static WireType getType(ItemStack it) {
+            if (!it.hasItemMeta() || !it.getItemMeta().getItemFlags().contains(ItemFlag.HIDE_UNBREAKABLE)) return null;
             for (WireType t:WireType.values()) {
-                if (compareStack(t.onStack,mt) || compareStack(t.offStack,mt)) {
+                if (compareStack(t.onStack, it) || compareStack(t.offStack, it)) {
                     if (t == DOT || t.name().contains("LEFT")|| t.name().contains("UP")|| t.name().contains("RIGHT")|| t.name().contains("DOWN")) {
                         return WireType.WIRE;
                     }
                     if (t.name().contains("timer")) {
-                        return WireType.timer;
+                        return WireType.TIMER;
                     }
                     return t;
                 }
@@ -380,8 +382,8 @@ public class Wire implements MetadataSaver {
             return null;
         }
     }
-    private static boolean compareStack(ItemStack o, ItemStack t) {
-        return o.getDurability() == t.getDurability() && o.getType() == t.getType();
+    private static boolean compareStack(ItemStack first, ItemStack second) {
+        return first.getDurability() == second.getDurability() && first.getType() == second.getType();
     }
     public BukkitTask timer;
     public BukkitTask soundTimer;
@@ -413,7 +415,7 @@ public class Wire implements MetadataSaver {
             orient();
             return;
         }
-        if (timerState == -1) {
+        if (timerState < 1) {
             initTimer();
             setPowered(false, PoweredReason.WIRE);
             return;

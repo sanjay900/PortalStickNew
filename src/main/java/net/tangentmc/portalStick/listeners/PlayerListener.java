@@ -303,13 +303,11 @@ public class PlayerListener implements Listener {
                 }
 
             } else {
-                if (evt.getItem().hasItemMeta() && !evt.getItem().getItemMeta().getItemFlags().contains(ItemFlag.HIDE_UNBREAKABLE)) {
+                Wire.WireType type = Wire.WireType.getType(evt.getItem());
+                if (type != null) {
                     BlockFace clicked = evt.getBlockFace();
-                    Wire.WireType type = Wire.WireType.getType(evt.getItem());
-                    if (type != null) {
-                        Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createSign(evt.getClickedBlock(), clicked, type, evt.getPlayer().getLocation().getDirection()));
-                        evt.setCancelled(true);
-                    }
+                    Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createSign(evt.getClickedBlock(), clicked, type, evt.getPlayer().getLocation().getDirection()));
+                    evt.setCancelled(true);
                 }
             }
 
