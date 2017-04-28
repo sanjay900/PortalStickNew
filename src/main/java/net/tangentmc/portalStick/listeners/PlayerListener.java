@@ -305,9 +305,13 @@ public class PlayerListener implements Listener {
             } else {
                 Wire.WireType type = Wire.WireType.getType(evt.getItem());
                 if (type != null) {
-                    BlockFace clicked = evt.getBlockFace();
-                    Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createSign(evt.getClickedBlock(), clicked, type, evt.getPlayer().getLocation().getDirection()));
                     evt.setCancelled(true);
+                    BlockFace clicked = evt.getBlockFace();
+                    if (evt.getBlockFace() == BlockFace.UP && type == Wire.WireType.WIRE) {
+                        evt.getClickedBlock().getRelative(BlockFace.UP).setType(Material.REDSTONE_WIRE);
+                        return;
+                    }
+                    Bukkit.getScheduler().runTask(PortalStick.getInstance(), () -> PortalStick.getInstance().getWireManager().createSign(evt.getClickedBlock(), clicked, type, evt.getPlayer().getLocation().getDirection()));
                 }
             }
 

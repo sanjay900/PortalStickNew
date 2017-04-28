@@ -7,6 +7,7 @@ import com.comphenix.protocol.wrappers.EnumWrappers;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import net.tangentmc.nmsUtils.NMSUtils;
 import net.tangentmc.nmsUtils.entities.HologramFactory;
 import net.tangentmc.nmsUtils.entities.NMSArmorStand;
@@ -30,6 +31,7 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 import org.joml.Quaterniond;
+import org.joml.Vector3d;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -53,6 +55,8 @@ public class Portal implements MetadataSaver {
     boolean primary;
     public ArrayList<Bridge> intersects = new ArrayList<>();
     Vector entDirection = null;
+    private Quaterniond rotation;
+    private Quaterniond rotationOut;
     public int roundToNearest(double original, int interval, int offset) {
         return (int) (Math.round( (original-offset)/interval ) * interval + offset);
     }
@@ -67,7 +71,7 @@ public class Portal implements MetadataSaver {
         Region region = PortalStick.getInstance().getRegionManager().getRegion(new V10Block(clicked));
         List<String> canPlace = region.getList(RegionSetting.PORTAL_BLOCKS);
         if (!Util.checkBlock(canPlace,clicked)) return;
-        if (facing.getX() == 0 && facing.getBlockZ() == 0) {
+        if (facing.getX() == 0 && facing.getZ() == 0) {
             bottom = clicked;
             this.entDirection = entDirection.normalize().setY(0);
             BlockFace face;
@@ -149,6 +153,12 @@ public class Portal implements MetadataSaver {
             }
             PortalStick.getInstance().getPortals().put(new V10Block(bottom), this);
             finished = true;
+            double yawRad = Math.toRadians(MathUtil.getLookAtYaw(entDirection)+180);
+            rotation = new Quaterniond().rotationXYZ(facing.getY()>0?Math.PI:0, yawRad,0);
+            rotationOut = new Quaterniond().rotationXYZ(facing.getY()<0?Math.PI:0, yawRad,0);
+            System.out.println(yawRad);
+
+            System.out.println(facing);
             return;
         }
         bottom = clicked.getRelative(BlockFace.DOWN);
@@ -166,6 +176,8 @@ public class Portal implements MetadataSaver {
         if (!bottom.getType().isSolid()) return;
         PortalStick.getInstance().getPortals().put(new V10Block(bottom), this);
         PortalStick.getInstance().getPortals().put(new V10Block(top), this);
+        rotation = new Quaterniond().lookAlong(VectorUtil.convert(facing),VectorUtil.UP);
+        rotationOut = new Quaterniond().lookAlong(VectorUtil.convert(new Vector(0,0,0).subtract(facing)),VectorUtil.UP);
         finished = true;
     }
     //TODO: check if facing and stair direction are in sync.
@@ -191,6 +203,21 @@ public class Portal implements MetadataSaver {
         PortalStick.getInstance().getPortals().put(new V10Block(top), this);
         this.facing = FaceUtil.faceToVector(stair.getFacing());
         this.facing.setY(stair.isInverted()?-1:1);
+        BlockFace f = FaceUtil.getDirection(facing.clone().setY(0));
+        if (f == BlockFace.EAST) {
+            rotation = new Quaterniond();
+            rotationOut = new Quaterniond().rotationY(Math.PI);
+        } else if (f == BlockFace.WEST) {
+            rotation = new Quaterniond().rotationY(Math.PI);
+            rotationOut = new Quaterniond();
+        } else if (f == BlockFace.NORTH) {
+            rotation = new Quaterniond().rotationY(-Math.PI/2);
+            rotationOut = new Quaterniond().rotationY(Math.PI/2);
+        } else if (f == BlockFace.SOUTH) {
+            rotation = new Quaterniond().rotationY(Math.PI/2);
+            rotationOut = new Quaterniond().rotationY(-Math.PI/2);
+        }
+
         finished = true;
     }
 
@@ -387,6 +414,9 @@ public class Portal implements MetadataSaver {
         if (getDestination() != null && getDestination().disabledFor.contains(entity.getUniqueId())) {
             return;
         }
+        if (facing.getX() != 0 || facing.getZ() != 0) {
+            if (entity.getLocation().getBlockY() > getTop().getY()) return;
+        }
         Location eloc = entity.getLocation();
         //Special case for entities in a funnel - the y coords aren't calculated correctly otherwise
         Optional<Entity> ent = entity.getNearbyEntities(1, 1, 1).stream().filter(en -> Util.checkInstance(Funnel.class, en)).findAny();
@@ -405,11 +435,13 @@ public class Portal implements MetadataSaver {
         }
         TeleportLoc loc = teleportEntity(eloc, motion, entity);
         if (loc == null) return;
-        if (!(entity instanceof Player) && !(entity instanceof Laser)) {
-            NMSUtils.getInstance().getUtil().teleportFast(entity, loc.destination, loc.getVelocity());
-        } else {
-            entity.teleport(loc.destination);
-        }
+//        if (!(entity instanceof Player) && !(entity instanceof Laser)) {
+//            NMSUtils.getInstance().getUtil().teleportFast(entity, loc.destination, loc.getVelocity());
+//        } else {
+//            entity.teleport(loc.destination);
+//        }
+
+        entity.teleport(loc.destination);
         //Adjust velocity for gel.
         if (!FaceUtil.isVertical(FaceUtil.getDirection(loc.velocity)) && Util.checkInstance(GelTube.class, entity)) {
             loc.velocity = loc.velocity.multiply(r.nextInt(10)+5 / 10d);
@@ -420,12 +452,13 @@ public class Portal implements MetadataSaver {
         entity.setVelocity(loc.velocity);
         Util.playSound(primary ? Sound.PORTAL_EXIT_BLUE : Sound.PORTAL_EXIT_ORANGE, new V10Block(loc.destination));
         getDestination().disabledFor.add(entity.getUniqueId());
-        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(PortalStick.getInstance(), () -> getDestination().disabledFor.remove(entity.getUniqueId()), 2L);
+        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(PortalStick.getInstance(), () -> getDestination().disabledFor.remove(entity.getUniqueId()), 3L);
 
     }
 
     @AllArgsConstructor
     @Getter
+    @ToString
     public class TeleportLoc {
         Location destination;
         Vector velocity;
@@ -435,8 +468,6 @@ public class Portal implements MetadataSaver {
         Portal destination = getDestination();
         if (destination == null) return null;
         Vector fromCenter = loc.toVector().subtract(portal.getLocation().add(0,1,0).toVector());
-        Location temp = loc.clone();
-        temp.setDirection(this.facing);
         Quaterniond q = getRotationInv().mul(destination.getRotation());
 
         Vector outorient = VectorUtil.rotate(q, fromCenter);
@@ -445,7 +476,7 @@ public class Portal implements MetadataSaver {
         Vector outvector = VectorUtil.rotate(q, motion);
         Location teleport = getDestination().portal.getLocation();
         if (destination.getEntDirection() == null) {
-            teleport.add(0,1,0);
+            teleport.add(0,0.5,0);
         }
         //If we have an inverted angled portal, we need to calculate a new location.
         //also, correct rotation of portal.
@@ -461,8 +492,7 @@ public class Portal implements MetadataSaver {
             }
         }
         teleport.setDirection(facing);
-        //If the destination is on the floor
-        teleport.add(outorient);
+        //teleport.add(outorient);
 
         if ((destination.facing.getX() != 0 || destination.facing.getZ() != 0)) {
             if (destination.facing.getY() == -1) {
@@ -471,6 +501,7 @@ public class Portal implements MetadataSaver {
                 teleport= teleport.add(0,0.5,0);
             }
         }
+        //If the destination is on the floor
         if (destination.facing.getX() == 0 && destination.facing.getZ() == 0) {
             if (outvector.getY() < 0.5 && outvector.getY() > 0) outvector.setY(0.5);
             teleport = teleport.add(0.5, Math.signum(outvector.getY()),0.5);
@@ -506,23 +537,16 @@ public class Portal implements MetadataSaver {
         return this.owner.startsWith("§region§_");
     }
     public Quaterniond getRotation() {
-        return new Quaterniond().rotationXYZ(portal.getHeadPose().getX(),MathUtil.getLookAtYaw(getFacing()),portal.getHeadPose().getZ());
+        return new Quaterniond(rotation);
     }
     public Quaterniond getRotationInv() {
-        if (isAngled()) {
-            return new Quaterniond().rotationXYZ(-portal.getHeadPose().getX(), Math.PI+MathUtil.getLookAtYaw(getFacing()), portal.getHeadPose().getZ());
-        } else if (isVertical()) {
-            return new Quaterniond().rotationXYZ(portal.getHeadPose().getX(), MathUtil.getLookAtYaw(getFacing()), Math.PI+portal.getHeadPose().getZ());
-        } else {
-            return new Quaterniond().rotationXYZ(portal.getHeadPose().getX(), Math.PI+MathUtil.getLookAtYaw(getFacing()), portal.getHeadPose().getZ());
-        }
+        return new Quaterniond(rotationOut);
     }
     @Override
     public String getMetadataName() {
         return "portalobj";
     }
     public boolean isAngled() {
-        System.out.println(facing);
         return (facing.getX() != 0 || facing.getZ() != 0) && facing.getY() == 1;
     }
     public boolean isVertical() {

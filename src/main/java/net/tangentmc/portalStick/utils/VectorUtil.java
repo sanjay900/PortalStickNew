@@ -14,22 +14,13 @@ import java.util.Collections;
 
 public class VectorUtil {
     public static Vector rotate(Quaterniond q, Vector origin) {
-        Vector3d v0 = new Vector3d(origin.getX(), origin.getY(), origin.getZ());
-        Vector3d tv = q.transform(v0);
-        return new Vector(tv.x, tv.y, tv.z);
+        return convert(q.transform(convert(origin)));
     }
-    /**
-     * Calculate a quaternion between two vectors
-     * Corrections based on the below link:
-     * https://bitbucket.org/sinbad/ogre/src/9db75e3ba05c/OgreMain/include/OgreVector3.h?fileviewer=file-view-default#cl-651
-     * @param origin
-     * @param dest
-     * @return
-     */
-    public static Quaterniond getRotationTo(Vector origin, Vector dest) {
-        Vector3d v0 = new Vector3d(origin.getX(), origin.getY(), origin.getZ());
-        Vector3d v1 = new Vector3d(dest.getX(), dest.getY(), dest.getZ());
-        return new Quaterniond().rotateTo(v0,v1);
+    public static Vector3d convert(Vector v) {
+        return new Vector3d(v.getX(),v.getY(),v.getZ());
+    }
+    public static Vector convert(Vector3d v) {
+        return new Vector(v.x,v.y,v.z);
     }
 
     public static Player getTargetPlayer(final Player player) {
@@ -66,4 +57,5 @@ public class VectorUtil {
         }
         return target;
     }
+    public static final Vector3d UP = new Vector3d(0,1,0);
 }
