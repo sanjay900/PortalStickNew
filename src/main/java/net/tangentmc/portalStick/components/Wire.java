@@ -25,6 +25,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -44,6 +45,8 @@ public class Wire extends MetadataSaver {
         this.type = type;
         facing = clicked;
         this.loc = new V10Block(block.getRelative(clicked));
+        if (!stick.getWireManager().wiresupport.containsKey(getV10Support())) stick.getWireManager().wiresupport.put(getV10Support(), new ArrayList<>());
+        if (!stick.getWireManager().wireloc.containsKey(loc)) stick.getWireManager().wireloc.put(loc, new ArrayList<>());
         this.stand = (ArmorStand) block.getWorld().spawnEntity(rotate(loc.getHandle().getBlock().getLocation(),direction).add(0.5, -0.94, 0.5), EntityType.ARMOR_STAND);
         NMSArmorStand nas = NMSArmorStand.wrap(stand);
         nas.lock();
@@ -84,6 +87,9 @@ public class Wire extends MetadataSaver {
         } else {
             facing = FaceUtil.getDirection(en.getLocation().getDirection()).getOppositeFace();
         }
+        PortalStick stick = PortalStick.getInstance();
+        if (!stick.getWireManager().wiresupport.containsKey(getV10Support())) stick.getWireManager().wiresupport.put(getV10Support(), new ArrayList<>());
+        if (!stick.getWireManager().wireloc.containsKey(loc)) stick.getWireManager().wireloc.put(loc, new ArrayList<>());
         if (type == null) return;
         powered = type.getState(stand.getHelmet());
         if (type == WireType.TIMER) {
@@ -109,6 +115,9 @@ public class Wire extends MetadataSaver {
             s.orient();
             source.addAll(s.source);
         });
+    }
+    public V10Block getV10Support() {
+        return loc.getRelative(facing.getOppositeFace());
     }
     public Block getSupport() {
         return loc.getHandle().getBlock().getRelative(facing.getOppositeFace());
@@ -197,11 +206,12 @@ public class Wire extends MetadataSaver {
     public boolean isSign() {
         return (type == WireType.TIMER ||type == WireType.INDICATOR||type.name().startsWith("dots")||type.name().startsWith("shape"));
     }
+    //TODO: this appears to not quite be working correctly. sometimes a ghost is left behind.
     public void remove() {
         stand.remove();
         plugin.getWireManager().wiresupport.get(new V10Block(this.getSupport())).remove(this);
         plugin.getWireManager().wireloc.get(loc).remove(this);
-        for (Wire w: plugin.getWireManager().wireloc.get(loc)) {
+        for (Wire w: new ArrayList<>(plugin.getWireManager().wireloc.get(loc))) {
             if (new V10Block(this.getSupport()).equals(new V10Block(w.getSupport()))) {
                 w.remove();
             }

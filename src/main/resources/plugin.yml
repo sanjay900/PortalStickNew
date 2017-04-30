@@ -3,6 +3,7 @@ main: net.tangentmc.portalStick.PortalStick
 version: @version@
 authors: [matejdro, oliverw92, V10lator, sanjay900]
 softdepend: [WorldGuard]
+load: STARTUP
 depend: [ProtocolLib, nmsUtils]
 commands:
   portalstick:

@@ -39,14 +39,10 @@ public class WireManager implements Listener {
         if (saver instanceof Wire) {
             Wire w = (Wire) saver;
             V10Block blk = new V10Block(w.getSupport());
-            if (wiresupport.containsKey(blk) && wireloc.containsKey(w.loc) && wiresupport.get(blk).stream().anyMatch(e -> wireloc.get(w.loc).contains(e))) {
-                w.remove();
-                return;
-            }
-            if (!wiresupport.containsKey(blk)) wiresupport.put(blk, new ArrayList<>());
-            if (!wireloc.containsKey(w.loc)) wireloc.put(w.loc, new ArrayList<>());
             wiresupport.get(blk).add(w);
             wireloc.get(w.loc).add(w);
+            w.orient();
+            w.updateNearby();
         }
     }
 
@@ -59,13 +55,13 @@ public class WireManager implements Listener {
     }
     private void createWire(Block block, BlockFace facing,WireType type, Vector entityDirection) {
         V10Block blk = new V10Block(block);
+        V10Block loc = new V10Block(block.getRelative(facing));
         if (!wiresupport.containsKey(blk)) wiresupport.put(blk, new ArrayList<>());
-        Wire w = new Wire(block,facing,type,plugin,entityDirection);
-        if (!wireloc.containsKey(w.loc)) wireloc.put(w.loc, new ArrayList<>());
-        wiresupport.get(blk).add(w);
-        wireloc.get(w.loc).add(w);
-        w.orient();
-        w.updateNearby();
+        if (!wireloc.containsKey(loc)) wireloc.put(loc, new ArrayList<>());
+        if (wiresupport.get(blk).stream().anyMatch(e -> wireloc.get(loc).contains(e))) {
+            return;
+        }
+        new Wire(block,facing,type,plugin,entityDirection);
     }
     public Set<Wire> getNearbyWire(V10Block loc) {
         return loc.getHandle().getWorld().getNearbyEntities(loc.getHandle(),2,2,2).stream().map(t -> MetadataSaver.get(t,Wire.class)).filter(Objects::nonNull).collect(Collectors.toSet());
