@@ -40,10 +40,12 @@ public class Region extends PortalUser
 		ArrayList<Portal> portals = new ArrayList<>();
 		World world = getWorld();
 		if (world == null) return portals;
-		Portal portal;
 		for (Entity en : world.getEntities()) {
-			portal = Util.getInstance(Portal.class, en);
-			if (portal == null) portal = Util.getInstance("portalobj2",en);
+			Portal portal = null;
+			Portal.PortalEntity pen = Util.getInstance(Portal.PortalEntity.class,en);
+			Portal.PortalFrame pf = Util.getInstance(Portal.PortalFrame.class,en);
+			if (pen != null) portal = pen.getPortal();
+			if (pf != null) portal = pf.getPortal();
 			if (portal != null && portal.isOpen() && portal.isPrimary() == primary && contains(new V10Block(en.getLocation()))) {
 				portals.add(portal);
 			}

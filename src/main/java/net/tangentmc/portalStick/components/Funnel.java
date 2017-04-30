@@ -2,7 +2,7 @@ package net.tangentmc.portalStick.components;
 
 import java.util.HashMap;
 
-import net.tangentmc.portalStick.utils.MetadataSaver;
+import net.tangentmc.nmsUtils.utils.MetadataSaver;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -20,17 +20,14 @@ import org.bukkit.util.Vector;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import net.tangentmc.nmsUtils.entities.NMSArmorStand;
-import net.tangentmc.nmsUtils.entities.NMSEntity;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.utils.Util;
 
 @Getter
 @NoArgsConstructor
-@Metadata(metadataName = "funnelobj")
-public class Funnel extends Bridge implements MetadataSaver {
+public class Funnel extends Bridge {
 	HashMap<V10Block,ArmorStand> setBlocks2;
 	Vector currentdir;
 	Vector newdir;
@@ -75,7 +72,7 @@ public class Funnel extends Bridge implements MetadataSaver {
 	}
 	private ArmorStand setBlock(Block b) {	
 		ArmorStand holo = (ArmorStand) b.getWorld().spawnEntity(b.getLocation().add(0.5,-0.1,0.5).setDirection(currentdir),EntityType.ARMOR_STAND);
-		holo.setMetadata(this.getMetadataName(), new FixedMetadataValue(PortalStick.getInstance(),this));
+		new FunnelEn(holo);
 		NMSArmorStand.wrap(holo).lock();
 		NMSArmorStand.wrap(holo).setWillSave(false);
 		holo.setHelmet(getItemStack());
@@ -96,10 +93,11 @@ public class Funnel extends Bridge implements MetadataSaver {
 		if (b.getType().isSolid() && !b.getType().equals(Material.STAINED_GLASS) || !b.getChunk().isLoaded() || b.getY() < 0 || b.getY() >= b.getWorld().getMaxHeight()) {
 			return false;
 		}	
-		Grill g = Util.retrieveMetadata(b,1,Grill.class);
+		Grill.SubGrill g = Util.retrieveMetadata(b,1,Grill.SubGrill.class);
 		if (g != null) return false;
-		Portal p = Util.retrieveMetadata(b,1,Portal.class);
-		if (p != null) {
+		Portal.PortalFrame pf = Util.retrieveMetadata(b,1,Portal.PortalFrame.class);
+		if (pf != null) {
+			Portal p = pf.getPortal();
 			if (!p.isOpen() || p.getDestination() == null) return false;
 			if (collided.contains(p)) return true;
 			collided.add(p);
@@ -154,11 +152,14 @@ public class Funnel extends Bridge implements MetadataSaver {
 		}, 1L);
 		this.setBlocks2.clear();
 	}
-	@Override
-	public String getMetadataName() {
-		return "funnelobj";
+
+	@MetadataSaver.Metadata(metadataName = "funnelobj")
+	public class FunnelEn extends MetadataSaver {
+		@Getter
+		private Funnel funnel = Funnel.this;
+		protected FunnelEn(Entity en) {
+			initMetadata(en);
+		}
 	}
-
-
 
 }

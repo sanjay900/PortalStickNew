@@ -103,7 +103,7 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
                     Collection<Entity> list = event.getPlayer().getWorld().getNearbyEntities(event.getPlayer().getLocation().add(vx,vy,vz),0.25,0.25,0.25);
 					list.remove(event.getPlayer().getPassenger());
 					list.remove(event.getPlayer());
-                    list.stream().filter(entity1 -> Util.checkInstance(Portal.class, entity1)).forEach(entity1 -> {
+                    list.stream().filter(entity1 -> Util.checkInstance(Portal.PortalFrame.class, entity1)).forEach(entity1 -> {
                         EntityCollideWithEntityEvent ev = new EntityCollideWithEntityEvent(event.getPlayer(), entity1, false, new org.bukkit.util.Vector(vx,vy,vz));
                         Bukkit.getPluginManager().callEvent(ev);
                         event.setCancelled(true);
@@ -125,17 +125,17 @@ public class PortalStick extends JavaPlugin implements CommandExecutor {
 	}
 
 	public void onDisable() {
-		for (World w: Bukkit.getWorlds()) {
-			for (Entity en: w.getEntities()) {
-				Cube c = Util.getInstance(Cube.class, en);
-				Portal p = Util.getInstance(Portal.class, en);
-				Grill g = Util.getInstance(Grill.class, en);
-				if (p == null) p = Util.getInstance("portalobj2",en);
-				if (c != null) c.remove();
-				if (p != null) p.closePlugin();
-				if (g != null) g.close();
-			}
-		}
+//		for (World w: Bukkit.getWorlds()) {
+//			for (Entity en: w.getEntities()) {
+//				Cube c = Util.getInstance(Cube.class, en);
+//				Portal p = Util.getInstance(Portal.class, en);
+//				Grill g = Util.getInstance(Grill.class, en);
+//				if (p == null) p = Util.getInstance("portalobj2",en);
+//				if (c != null) c.remove();
+//				if (p != null) p.closePlugin();
+//				if (g != null) g.close();
+//			}
+//		}
 		bridgeManager.disableAll();
 		gelManager.disableAll();
 		//Reset all recievers

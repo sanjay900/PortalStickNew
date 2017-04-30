@@ -46,15 +46,6 @@ public class BlockListener implements Listener{
 	}
 
 	@EventHandler
-	public void loadWorld(WorldLoadEvent evt) {
-		PortalStick.getInstance().getWireManager().loadWorld(evt.getWorld());
-	}
-
-	@EventHandler
-	public void loadChunk(ChunkLoadEvent evt) {
-		PortalStick.getInstance().getWireManager().loadChunk(evt.getChunk());
-	}
-	@EventHandler
 	public void onBlockBreak(BlockBreakEvent evt) {
 		PortalStick.getInstance().getBridgeManager().blockUpdate(evt.getBlock());
         PortalStick.getInstance().getWireManager().blockBreak(evt.getBlock());
@@ -74,7 +65,7 @@ public class BlockListener implements Listener{
 	public void onRedstone(BlockRedstoneEvent evt) {
 		PortalStick.getInstance().getBridgeManager().powerBlock(evt.getBlock(),evt.getNewCurrent() > 0);
 		Bukkit.getScheduler().runTaskLater(PortalStick.getInstance(),() -> {
-			Grill g = Util.retrieveMetadata(evt.getBlock(), 3, Grill.class);
+			Grill.SubGrill g = Util.retrieveMetadata(evt.getBlock(), 3, Grill.SubGrill.class);
 			if (g == null && evt.getNewCurrent() == 0) {
 				Iterator<Grill> it = offGrills.iterator();
 				while (it.hasNext()) {
@@ -85,9 +76,9 @@ public class BlockListener implements Listener{
 					}
 				}
 			}
-			if (g != null && evt.getNewCurrent() > 0 && g.getBorder().stream().anyMatch(isPowered)) {
-				g.close();
-				offGrills.add(g);
+			if (g != null && evt.getNewCurrent() > 0 && g.getGrill().getBorder().stream().anyMatch(isPowered)) {
+				g.getGrill().close();
+				offGrills.add(g.getGrill());
 			}
 		}, 1L);
 		AutomatedPortal portal = Util.retrieveMetadata(evt.getBlock(), 4, AutomatedPortal.class);

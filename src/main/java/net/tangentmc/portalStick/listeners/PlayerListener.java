@@ -55,8 +55,9 @@ public class PlayerListener implements Listener {
         Portal portal;
         Vector velocity = evt.getTo().toVector().subtract(evt.getFrom().toVector());
         for (Entity target: evt.getTo().getWorld().getNearbyEntities(evt.getTo(),2,2,2)) {
-            if (!target.hasMetadata("portalobj2")) continue;
-            portal = (Portal) target.getMetadata("portalobj2").get(0).value();
+            Portal.PortalEntity en = Util.getInstance(Portal.PortalEntity.class,target);
+            if (en == null) continue;
+            portal = en.getPortal();
             if (Math.abs(velocity.lengthSquared()) > 1 && portal.getFacing().getY() > 0) {
                 BlockIterator it = new BlockIterator(evt.getPlayer().getWorld(), evt.getFrom().toVector(), velocity, 0, 5);
                 while (it.hasNext()) {
@@ -142,7 +143,7 @@ public class PlayerListener implements Listener {
                 if (!(en instanceof ArmorStand)) return;
                 if (event.getAction() != EntityUseAction.ATTACK) {
                     //Allow placing through wire and funnels, as their entities go below where they sit.
-                    if (!Util.checkInstance(Wire.class, en) && !Util.checkInstance(Funnel.class, en)) return;
+                    if (!Util.checkInstance(Wire.class, en) && !Util.checkInstance(Funnel.FunnelEn.class, en)) return;
 
                     PlayerInteractEvent evt = new PlayerInteractEvent(event.getPlayer(), Action.RIGHT_CLICK_BLOCK, event.getPlayer().getItemInHand(), target, FaceUtil.getDirection(placed.getLocation().toVector().subtract(target.getLocation().toVector())));
                     Bukkit.getPluginManager().callEvent(evt);
@@ -252,9 +253,9 @@ public class PlayerListener implements Listener {
                 if (w != null) {
                     w.remove();
                 }
-                Grill g = Util.getInstance(Grill.class, en);
+                Grill.SubGrill g = Util.getInstance(Grill.SubGrill.class, en);
                 if (g != null && PortalStick.getInstance().hasPermission(evt.getPlayer(), PortalStick.PERM_DELETE_GRILL))
-                    g.remove();
+                    g.getGrill().remove();
             });
         }
     }
@@ -405,16 +406,17 @@ public class PlayerListener implements Listener {
         }
         if (evt.getItem().getType() == Material.FLINT_AND_STEEL) {
             if (evt.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                if (evt.getClickedBlock().getType() == Material.STAINED_GLASS_PANE && evt.getClickedBlock().getData() == (byte) 0) {
-                    if (Util.retrieveMetadata(evt.getClickedBlock(), 2, Laser.class) == null) {
-                        PortalStick.getInstance().getLaserManager().createLaser(new V10Block(evt.getClickedBlock()));
-                        PortalStick.getInstance().getConfiguration().saveAll();
-                        evt.setCancelled(true);
-                    }
-                }
-                if (evt.getClickedBlock().getType() == Material.STAINED_GLASS_PANE && (evt.getClickedBlock().getData() == (byte) 14 || evt.getClickedBlock().getData() == (byte) 15)) {
-                    PortalStick.getInstance().getBridgeManager().createBridge(evt.getClickedBlock());
-                }
+                //TODO: use laser spawner custom block specifically.
+//                if (evt.getClickedBlock().getType() == Material.STAINED_GLASS_PANE && evt.getClickedBlock().getData() == (byte) 0) {
+//                    if (Util.retrieveMetadata(evt.getClickedBlock(), 2, Laser.class) == null) {
+//                        PortalStick.getInstance().getLaserManager().createLaser(new V10Block(evt.getClickedBlock()));
+//                        PortalStick.getInstance().getConfiguration().saveAll();
+//                        evt.setCancelled(true);
+//                    }
+//                }
+//                if (evt.getClickedBlock().getType() == Material.STAINED_GLASS_PANE && (evt.getClickedBlock().getData() == (byte) 14 || evt.getClickedBlock().getData() == (byte) 15)) {
+//                    PortalStick.getInstance().getBridgeManager().createBridge(evt.getClickedBlock());
+//                }
                 if (evt.getClickedBlock().getType() != Material.MOSSY_COBBLESTONE) return;
                 Grill grill = new Grill(new V10Block(evt.getClickedBlock()));
                 if (grill.isComplete()) {
@@ -431,7 +433,7 @@ public class PlayerListener implements Listener {
         boolean far = evt.getAction().name().contains("AIR") || Util.isTranslucent(evt.getClickedBlock().getType());
         List<Block> targetBlocks = evt.getPlayer().getLineOfSight(transparent, 120);
         for (Block b: targetBlocks) {
-            Optional<Entity> e = b.getWorld().getNearbyEntities(b.getLocation(),0.5,0.5,0.5).stream().filter(en -> Util.checkInstance(Grill.class,en)).findFirst();
+            Optional<Entity> e = b.getWorld().getNearbyEntities(b.getLocation(),0.5,0.5,0.5).stream().filter(en -> Util.checkInstance(Grill.SubGrill.class,en)).findFirst();
             if (e.isPresent()) {
                 //TODO: Change grill textures, add some way to make them flash
                 //Util.getInstance(Grill.class,e.get()).flash();

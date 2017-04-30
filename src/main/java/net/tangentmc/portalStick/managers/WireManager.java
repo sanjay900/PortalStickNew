@@ -4,71 +4,53 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import net.tangentmc.nmsUtils.events.MetadataCreateEvent;
+import net.tangentmc.nmsUtils.utils.MetadataSaver;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.util.Vector;
 
 import net.tangentmc.nmsUtils.utils.FaceUtil;
-import net.tangentmc.nmsUtils.utils.Utils;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.components.AutomatedPortal;
 import net.tangentmc.portalStick.components.Region;
 import net.tangentmc.portalStick.components.Wire;
 import net.tangentmc.portalStick.components.Wire.PoweredReason;
 import net.tangentmc.portalStick.components.Wire.WireType;
-import net.tangentmc.portalStick.utils.Util;
 
-public class WireManager {
+public class WireManager implements Listener {
     private final PortalStick plugin = PortalStick.getInstance();
     public final HashMap<V10Block,ArrayList<Wire>> wiresupport = new HashMap<>();
     public final HashMap<V10Block,ArrayList<Wire>> wireloc = new HashMap<>();
+    public WireManager() {
+        Bukkit.getPluginManager().registerEvents(this, PortalStick.getInstance());
+    }
     public void loadAllWire() {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> new ArrayList<>(wiresupport.values()).forEach(w2 -> new ArrayList<>(w2).forEach(Wire::update)), 1L, 1L);
-        Bukkit.getWorlds().forEach(this::loadWorld);
         wiresupport.values().forEach(w2 -> w2.forEach(Wire::orient));
     }
-    public void loadChunk(Chunk w) {
-        for (Entity en: w.getEntities()) {
-            if (en instanceof ArmorStand) {
-                if (en.getCustomName() != null && (en.getCustomName().startsWith("wiret")||en.getCustomName().equals("wire"))) {
-                    Wire w2 = new Wire((ArmorStand) en,plugin);
-                    V10Block blk = new V10Block(w2.getSupport());
-                    if (!wiresupport.containsKey(blk)) wiresupport.put(blk, new ArrayList<>());
-                    if (!wireloc.containsKey(w2.loc)) wireloc.put(w2.loc, new ArrayList<>());
-                    wiresupport.get(blk).add(w2);
-                    wireloc.get(w2.loc).add(w2);
-                }
-                if (en.getCustomName() != null && en.getCustomName().equals(new AutomatedPortal().getMetadataName())) {
-                    new AutomatedPortal((ArmorStand) en);
-                }
+    @EventHandler
+    public void wireLoad(MetadataCreateEvent evt) {
+        MetadataSaver saver = evt.getMetadata();
+        if (saver instanceof Wire) {
+            Wire w = (Wire) saver;
+            V10Block blk = new V10Block(w.getSupport());
+            if (wiresupport.containsKey(blk) && wireloc.containsKey(w.loc) && wiresupport.get(blk).stream().anyMatch(e -> wireloc.get(w.loc).contains(e))) {
+                w.remove();
+                return;
             }
+            if (!wiresupport.containsKey(blk)) wiresupport.put(blk, new ArrayList<>());
+            if (!wireloc.containsKey(w.loc)) wireloc.put(w.loc, new ArrayList<>());
+            wiresupport.get(blk).add(w);
+            wireloc.get(w.loc).add(w);
         }
     }
-    public void loadWorld(World w) {
-        for (Chunk c : w.getLoadedChunks()) {
-            this.loadChunk(c);
-        }
-        for (Entity en: w.getEntities()) {
-            Wire w2 = Util.getInstance(Wire.class,en);
-            if (w2 != null) w2.orient();;
-        }
-    }
-    public void unloadWorld(World w) {
-        Iterator<Entry<V10Block, ArrayList<Wire>>> it = wiresupport.entrySet().iterator();
-        while (it.hasNext()) {
-            Entry<V10Block, ArrayList<Wire>> e = it.next();
-            if (e.getKey().getWorldName().equals(w.getName())) {
-                it.remove();
-            }
-        }
-    }
+
+
     public void createWire(Block block, BlockFace facing, Vector entityDirection) {
         createWire(block,facing,WireType.WIRE,entityDirection);
     }
@@ -79,10 +61,6 @@ public class WireManager {
         V10Block blk = new V10Block(block);
         if (!wiresupport.containsKey(blk)) wiresupport.put(blk, new ArrayList<>());
         Wire w = new Wire(block,facing,type,plugin,entityDirection);
-        if (wiresupport.containsKey(blk) && wireloc.containsKey(w.loc) && wiresupport.get(blk).stream().anyMatch(e -> wireloc.get(w.loc).contains(e))) {
-            w.remove();
-            return;
-        }
         if (!wireloc.containsKey(w.loc)) wireloc.put(w.loc, new ArrayList<>());
         wiresupport.get(blk).add(w);
         wireloc.get(w.loc).add(w);
@@ -90,7 +68,7 @@ public class WireManager {
         w.updateNearby();
     }
     public Set<Wire> getNearbyWire(V10Block loc) {
-        return loc.getHandle().getWorld().getNearbyEntities(loc.getHandle(),2,2,2).stream().map(t -> Util.getInstance(Wire.class,t)).filter(Objects::nonNull).collect(Collectors.toSet());
+        return loc.getHandle().getWorld().getNearbyEntities(loc.getHandle(),2,2,2).stream().map(t -> MetadataSaver.get(t,Wire.class)).filter(Objects::nonNull).collect(Collectors.toSet());
     }
     public List<Wire> getInRegion(V10Block loc) {
         List<Wire> wire = new ArrayList<Wire>();

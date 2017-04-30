@@ -1,14 +1,12 @@
 package net.tangentmc.portalStick.components;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import net.jodah.expiringmap.ExpirationListener;
 import net.jodah.expiringmap.ExpiringMap;
 import net.tangentmc.nmsUtils.utils.LocationIterator;
+import net.tangentmc.nmsUtils.utils.MetadataSaver;
 import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.BlockStorage;
-import net.tangentmc.portalStick.utils.MetadataSaver;
-import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.utils.Util;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -20,17 +18,13 @@ import org.bukkit.util.Vector;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@NoArgsConstructor
-@Metadata(metadataName = "laseren")
-public class Laser implements MetadataSaver {
+public class Laser {
     ExpiringMap<BlockStorage, BlockStorage> recievers = ExpiringMap.builder()
             //Expire in 2 ticks (Will reset changed blocks unless they are repeatedly hit)
             .expiration(100, TimeUnit.MILLISECONDS)
-            .expirationListener(new ExpirationListener<BlockStorage, BlockStorage>() {
-                public void expired(BlockStorage block, BlockStorage redstone) {
-                    block.set();
-                    redstone.set();
-                }
+            .expirationListener((ExpirationListener<BlockStorage, BlockStorage>) (block, redstone) -> {
+                block.set();
+                redstone.set();
             })
             .build();
     @Getter
@@ -57,8 +51,9 @@ public class Laser implements MetadataSaver {
                 for (Entity en : this.getNearbyEntities(STEP_SIZE, STEP_SIZE, STEP_SIZE)) {
                     if (sourcePortal != null && en.getUniqueId().equals(sourcePortal.portal.getUniqueId())) continue;
                     if (sourceCube != null && en.getUniqueId().equals(sourceCube.as.getUniqueId())) continue;
-                    if (en.hasMetadata("portalobj2")) {
-                        Portal pl = (Portal) en.getMetadata("portalobj2").get(0).value();
+                    Portal.PortalEntity pen = Util.getInstance(Portal.PortalEntity.class, en);
+                    if (pen != null) {
+                        Portal pl = pen.getPortal();
                         if (pl.getDestination() == null) continue;
                         Portal.TeleportLoc tloc = pl.teleportEntity(current,init.getDirection(),null);
 

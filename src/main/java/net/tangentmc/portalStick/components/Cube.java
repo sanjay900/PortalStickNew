@@ -1,42 +1,36 @@
 package net.tangentmc.portalStick.components;
 
-import net.tangentmc.nmsUtils.utils.BlockUtil;
+import lombok.Getter;
+import net.tangentmc.nmsUtils.NMSUtils;
+import net.tangentmc.nmsUtils.entities.NMSArmorStand;
+import net.tangentmc.nmsUtils.entities.NMSEntity;
+import net.tangentmc.nmsUtils.resourcepacks.ResourcePackAPI;
+import net.tangentmc.nmsUtils.utils.MetadataSaver;
+import net.tangentmc.nmsUtils.utils.V10Block;
+import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.GelType;
-import net.tangentmc.portalStick.utils.MetadataSaver;
-import net.tangentmc.portalStick.utils.RegionSetting;
-import net.tangentmc.portalStick.utils.Util;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import net.tangentmc.nmsUtils.entities.NMSArmorStand;
-import net.tangentmc.nmsUtils.entities.NMSEntity;
-import net.tangentmc.nmsUtils.utils.V10Block;
-import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
+import java.util.HashMap;
 
 @Getter
-@NoArgsConstructor
-@Metadata(metadataName = "cuben")
-public class Cube implements MetadataSaver {
-    @AllArgsConstructor
+@MetadataSaver.Metadata(metadataName = "cuben")
+public class Cube extends MetadataSaver {
     public enum CubeType {
-        COMPANION(57,58,59,"ccube"),
-        NORMAL(54,55,56,"cube"),
-        LASER(60,61,62,"lcube");
-        int normal;
-        int speed;
-        int jump;
+        COMPANION("ccube"),
+        NORMAL("cube"),
+        LASER("lcube");
+        private HashMap<GelType,ItemStack> cubeMap = new HashMap<>();
+        CubeType(String name) {
+            this.name = name;
+        }
         String name;
         public static CubeType fromSign(String signText) {
             try {
@@ -48,24 +42,19 @@ public class Cube implements MetadataSaver {
             }
             return null;
         }
-        public static CubeType fromId(int id) {
-            for (CubeType c : values()) {
-                if (c.speed == id || c.normal == id|| c.jump == id) return c;
-            }
-
-            return null;
+        private String getResource() {
+            return "cube/"+name().toLowerCase();
         }
         public ItemStack getCube(GelType type) {
-            if (type == null) {
-                return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)normal));
+            return cubeMap.getOrDefault(type,cubeMap.get(null));
+        }
+        static {
+            ResourcePackAPI a = NMSUtils.getInstance().getResourcePackAPI();
+            for (CubeType type : CubeType.values()) {
+                type.cubeMap.put(null,a.getItemStack(type.getResource()));
+                type.cubeMap.put(GelType.JUMP,a.getItemStack(type.getResource()+"_jump"));
+                type.cubeMap.put(GelType.SPEED,a.getItemStack(type.getResource()+"_speed"));
             }
-            switch (type) {
-                case SPEED:
-                    return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)speed));
-                case JUMP:
-                    return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)jump));
-            }
-            return Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE,1,(short)normal));
         }
     }
     GelType gelType;
@@ -86,7 +75,7 @@ public class Cube implements MetadataSaver {
         as.setAI(false);
         as.setSilent(true);
         NMSArmorStand.wrap(as).lock();
-        as.setMetadata("cuben", new FixedMetadataValue(PortalStick.getInstance(),this));
+        initMetadata(as);
     }
     public void setGelType(GelType type) {
         if (type == GelType.CONVERSION) return;

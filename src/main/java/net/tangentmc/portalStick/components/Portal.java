@@ -6,7 +6,6 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
 import net.tangentmc.nmsUtils.NMSUtils;
 import net.tangentmc.nmsUtils.entities.HologramFactory;
@@ -14,11 +13,11 @@ import net.tangentmc.nmsUtils.entities.NMSArmorStand;
 import net.tangentmc.nmsUtils.entities.NMSHologram;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
 import net.tangentmc.nmsUtils.utils.MathUtil;
+import net.tangentmc.nmsUtils.utils.MetadataSaver;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.*;
 import net.tangentmc.portalStick.utils.Config.Sound;
-import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -27,20 +26,16 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Stairs;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 import org.joml.Quaterniond;
-import org.joml.Vector3d;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 @Getter
-@NoArgsConstructor
-@Metadata(metadataName = "portalobj")
 //TODO: Code back in angled portals
-public class Portal implements MetadataSaver {
+public class Portal {
     private Vector facing;
     private String owner;
     private NMSHologram back;
@@ -289,9 +284,10 @@ public class Portal implements MetadataSaver {
         if (!finished) return false;
         spawnPortalStand();
 
+        //Used for checking if its a portal (funnel and removing)
+        new PortalEntity(portal);
         if (getDestination() == null) {
             portal.setHelmet(Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE, 1, (short) (primary ? 64 : 66))));
-            portal.setMetadata("portalobj2", new FixedMetadataValue(PortalStick.getInstance(), this));
             open = true;
             if (back != null) back.remove();
             back = null;
@@ -299,8 +295,6 @@ public class Portal implements MetadataSaver {
         }
 
         portal.setHelmet(Util.setUnbreakable(new ItemStack(Material.DIAMOND_HOE, 1, (short) (primary ? 63 : 65))));
-        //Used for checking if its a portal (funnel and removing)
-        portal.setMetadata("portalobj2", new FixedMetadataValue(PortalStick.getInstance(), this));
         //Dont recreate these if the portal has been opened already, and is just being updated.
         if (bottomStorage == null) {
             bottomStorage = new BlockStorage(bottom);
@@ -316,7 +310,7 @@ public class Portal implements MetadataSaver {
                 back = new HologramFactory().withLocation(bottom.getLocation().add(0.5, 0.5, 0.5)).withHead(new ItemStack(Material.AIR), 1).build();
             }
             if (back != null)
-                back.getEntity().setMetadata(getMetadataName(), new FixedMetadataValue(PortalStick.getInstance(), this));
+                new PortalFrame(back.getEntity());
         }
 
         open = true;
@@ -419,7 +413,7 @@ public class Portal implements MetadataSaver {
         }
         Location eloc = entity.getLocation();
         //Special case for entities in a funnel - the y coords aren't calculated correctly otherwise
-        Optional<Entity> ent = entity.getNearbyEntities(1, 1, 1).stream().filter(en -> Util.checkInstance(Funnel.class, en)).findAny();
+        Optional<Entity> ent = entity.getNearbyEntities(1, 1, 1).stream().filter(en -> Util.checkInstance(Funnel.FunnelEn.class, en)).findAny();
         if (ent.isPresent() && !(entity instanceof Player)) {
             Location b2 = getDestination().getBottom().getLocation();
             if (getTop() != null && ent.get().getLocation().getY() != getBottom().getY() && getDestination().getTop() != null) {
@@ -443,10 +437,10 @@ public class Portal implements MetadataSaver {
 
         entity.teleport(loc.destination);
         //Adjust velocity for gel.
-        if (!FaceUtil.isVertical(FaceUtil.getDirection(loc.velocity)) && Util.checkInstance(GelTube.class, entity)) {
+        if (!FaceUtil.isVertical(FaceUtil.getDirection(loc.velocity)) && Util.checkInstance(GelTube.Gel.class, entity)) {
             loc.velocity = loc.velocity.multiply(r.nextInt(10)+5 / 10d);
         }
-        if (loc.getVelocity().getY() > 0.5&& Util.checkInstance(GelTube.class, entity)) {
+        if (loc.getVelocity().getY() > 0.5&& Util.checkInstance(GelTube.Gel.class, entity)) {
             loc.velocity = loc.velocity.setY(1);
         }
         entity.setVelocity(loc.velocity);
@@ -474,6 +468,10 @@ public class Portal implements MetadataSaver {
         Vector v = loc.getDirection();
         Vector facing = VectorUtil.rotate(q, v);
         Vector outvector = VectorUtil.rotate(q, motion);
+        //TODO: fix outorient and then add it back in.
+        //TODO: WHY IS THIS -y when going from -y to x or z????
+        System.out.println(outvector);
+        System.out.println(motion);
         Location teleport = getDestination().portal.getLocation();
         if (destination.getEntDirection() == null) {
             teleport.add(0,0.5,0);
@@ -542,15 +540,29 @@ public class Portal implements MetadataSaver {
     public Quaterniond getRotationInv() {
         return new Quaterniond(rotationOut);
     }
-    @Override
-    public String getMetadataName() {
-        return "portalobj";
-    }
     public boolean isAngled() {
         return (facing.getX() != 0 || facing.getZ() != 0) && facing.getY() == 1;
     }
     public boolean isVertical() {
         return facing.getX() == 0 && facing.getZ() == 0;
+    }
+
+    @MetadataSaver.Metadata(metadataName = "portalobj")
+    public class PortalFrame extends MetadataSaver{
+        @Getter
+        private Portal portal = Portal.this;
+        protected PortalFrame(Entity en) {
+            initMetadata(en);
+        }
+    }
+    @MetadataSaver.Metadata(metadataName = "portalobj2")
+    public class PortalEntity extends MetadataSaver{
+        @Getter
+        private Portal portal = Portal.this;
+
+        protected PortalEntity(Entity en) {
+            initMetadata(en);
+        }
     }
 }
 

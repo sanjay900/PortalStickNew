@@ -5,8 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 
 import net.tangentmc.nmsUtils.utils.*;
-import net.tangentmc.portalStick.managers.RegionManager;
-import net.tangentmc.portalStick.utils.MetadataSaver;
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Location;
@@ -28,15 +26,13 @@ import lombok.NoArgsConstructor;
 import net.tangentmc.nmsUtils.entities.HologramFactory;
 import net.tangentmc.nmsUtils.entities.NMSHologram;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.components.Wire.PoweredReason;
 import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.RegionSetting;
 import net.tangentmc.portalStick.utils.Util;
 @Getter
 @NoArgsConstructor
-@Metadata(metadataName = "grillen")
-public class Grill implements MetadataSaver {
+public class Grill {
     public Grill(V10Block initial) {
         init = initial;
         complete = placeRecursiveEmancipationGrill(init);
@@ -166,7 +162,7 @@ public class Grill implements MetadataSaver {
                 NMSHologram holo = factory.build();
                 grill.add(holo);
                 for (Entity en : holo.getLines()) {
-                    en.setMetadata("grillen", new FixedMetadataValue(PortalStick.getInstance(),this));
+                    new SubGrill(en);
                 }
             }
         }
@@ -316,12 +312,6 @@ public class Grill implements MetadataSaver {
         return loc.getWorld().getName() + "," + loc.getX() + "," + loc.getY() + "," + loc.getZ();
     }
 
-
-    @Override
-    public String getMetadataName() {
-        return "grillen";
-    }
-
     public void close() {
         grill.forEach(NMSHologram::remove);
     }
@@ -329,5 +319,15 @@ public class Grill implements MetadataSaver {
         grill.forEach(NMSHologram::remove);
         PortalStick.getInstance().getGrillManager().grills.remove(this);
         PortalStick.getInstance().getConfiguration().saveAll();
+    }
+
+    @MetadataSaver.Metadata(metadataName = "grillen")
+    public class SubGrill extends MetadataSaver {
+        @Getter
+        Grill grill = Grill.this;
+
+        protected SubGrill(Entity en) {
+            initMetadata(en);
+        }
     }
 }

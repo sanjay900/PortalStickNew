@@ -1,14 +1,13 @@
 package net.tangentmc.portalStick.components;
 
-import lombok.NoArgsConstructor;
 import net.tangentmc.nmsUtils.NMSUtils;
 import net.tangentmc.nmsUtils.entities.NMSArmorStand;
 import net.tangentmc.nmsUtils.utils.FaceUtil;
+import net.tangentmc.nmsUtils.utils.MetadataSaver;
+import net.tangentmc.nmsUtils.utils.MetadataSaver.Metadata;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.Config.Sound;
-import net.tangentmc.portalStick.utils.MetadataSaver;
-import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
 import net.tangentmc.portalStick.utils.Util;
 import org.apache.commons.collections4.map.MultiKeyMap;
 import org.bukkit.Bukkit;
@@ -18,10 +17,10 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
@@ -29,9 +28,8 @@ import org.bukkit.util.Vector;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-@NoArgsConstructor
 @Metadata(metadataName = "wireobj")
-public class Wire implements MetadataSaver {
+public class Wire extends MetadataSaver {
     public ArmorStand stand;
     public V10Block loc;
     public boolean powered = false;
@@ -47,23 +45,23 @@ public class Wire implements MetadataSaver {
         facing = clicked;
         this.loc = new V10Block(block.getRelative(clicked));
         this.stand = (ArmorStand) block.getWorld().spawnEntity(rotate(loc.getHandle().getBlock().getLocation(),direction).add(0.5, -0.94, 0.5), EntityType.ARMOR_STAND);
-        NMSArmorStand.wrap(stand).lock();
+        NMSArmorStand nas = NMSArmorStand.wrap(stand);
+        nas.lock();
         stand.setGravity(false);
         stand.setHelmet(getItemStack());
         stand.setRemoveWhenFarAway(false);
         stand.setVisible(false);
-        stand.setCustomName("wire");
-        stand.setCustomNameVisible(false);
-        stand.setMetadata(this.getMetadataName(), new FixedMetadataValue(PortalStick.getInstance(),this));
         stand.setHeadPose(new EulerAngle(facing==BlockFace.DOWN?0:facing==BlockFace.UP?Math.toRadians(180):Math.toRadians(90),0,0));
         stand.setAI(false);
         stand.setSilent(true);
+
         updateNearby();
         powered = this.hasPoweredSource();
         orient();
         if (type == WireType.TIMER) {
             initTimer();
         }
+        initMetadata(stand);
     }
     public Location rotate(Location loc, Vector entityDirection) {
         if (FaceUtil.isVertical(facing) && isSign()) {
@@ -73,11 +71,10 @@ public class Wire implements MetadataSaver {
         }
         return loc;
     }
-    public Wire(ArmorStand en,PortalStick stick) {
-        this.plugin = stick;
-        stand = en;
+    public Wire(Entity en) {
+        this.plugin = PortalStick.getInstance();
+        stand = (ArmorStand) en;
         NMSArmorStand.wrap(stand).lock();
-        stand.setMetadata(getMetadataName(), new FixedMetadataValue(PortalStick.getInstance(),this));
         this.loc = new V10Block(en.getLocation().getBlock().getRelative(BlockFace.UP));
         type = WireType.getType(stand.getHelmet());
         if (stand.getHeadPose().getX()==0) {
@@ -93,8 +90,9 @@ public class Wire implements MetadataSaver {
             this.source.add(this);
             initTimer();
         }
-
+        initMetadata(stand);
     }
+
 
 
     public void update() {
@@ -203,6 +201,11 @@ public class Wire implements MetadataSaver {
         stand.remove();
         plugin.getWireManager().wiresupport.get(new V10Block(this.getSupport())).remove(this);
         plugin.getWireManager().wireloc.get(loc).remove(this);
+        for (Wire w: plugin.getWireManager().wireloc.get(loc)) {
+            if (new V10Block(this.getSupport()).equals(new V10Block(w.getSupport()))) {
+                w.remove();
+            }
+        }
         plugin.getWireManager().getNearbyWire(this.loc).forEach(Wire::orient);
     }
     private ItemStack getItemStack() {
@@ -446,10 +449,6 @@ public class Wire implements MetadataSaver {
                 loc.getHandle().getBlock().getRelative(BlockFace.DOWN,2).setType(Material.AIR);
             }
         }
-    }
-    @Override
-    public String getMetadataName() {
-        return "wireobj";
     }
 
 }

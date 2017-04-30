@@ -9,6 +9,8 @@ import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.components.Portal;
 import net.tangentmc.portalStick.utils.Util;
 
+import java.util.Objects;
+
 public class DeleteAllCommand extends BaseCommand {
 	public DeleteAllCommand()
 	{
@@ -17,7 +19,7 @@ public class DeleteAllCommand extends BaseCommand {
 	
 	public boolean execute() {
 		//Loop through all worlds and delete all portals
-		Bukkit.getWorlds().stream().forEach(world -> world.getEntities().stream().filter(en -> Util.checkInstance(Portal.class, en)).map(en -> Util.getInstance(Portal.class, en)).forEach(Portal::delete));
+		Bukkit.getWorlds().stream().forEach(world -> world.getEntities().stream().map(en -> Util.getInstance(Portal.PortalEntity.class, en)).filter(Objects::nonNull).forEach(p -> p.getPortal().delete()));
 		Utils.sendMessage(sender, plugin.getI18n().getString("AllPortalsDeleted", playerName));
 		return true;
 	}

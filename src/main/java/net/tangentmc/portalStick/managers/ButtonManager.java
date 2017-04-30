@@ -15,10 +15,7 @@ import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.Config.Sound;
 import net.tangentmc.portalStick.utils.Util;
-//TODO: spawn an entity when you trigger a button, then check if entities are colliding with it and disable.
-//or even just spawn an entity to start with when a button is placed.
-//We might need to add something so nmsutils can have  custom bounding box though.
-//the current button code is honestly extremely aids, we should redo it
+//TODO: Use customItems to do buttons and do away with most of this shit
 public class ButtonManager {
 	private PortalStick plugin = PortalStick.getInstance();
 	public void disableAll() {

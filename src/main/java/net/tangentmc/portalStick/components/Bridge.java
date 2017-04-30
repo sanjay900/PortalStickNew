@@ -77,10 +77,11 @@ public class Bridge {
 		if (b.getType().isSolid() && !b.getType().equals(Material.STAINED_GLASS)) {
 			return false;
 		}	
-		Grill g = Util.retrieveMetadata(b,1,Grill.class);
+		Grill.SubGrill g = Util.retrieveMetadata(b,1,Grill.SubGrill.class);
 		if (g != null) return false;
-		Portal p = Util.retrieveMetadata(b,1,Portal.class);
-		if (p != null) {
+		Portal.PortalFrame pf = Util.retrieveMetadata(b,1,Portal.PortalFrame.class);
+		if (pf != null) {
+			Portal p = pf.getPortal();
 			if (!p.isOpen() || p.getDestination() == null) return false;
 			if (collided.contains(p)) return true;
 			collided.add(p);

@@ -1,12 +1,14 @@
 package net.tangentmc.portalStick.components;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Random;
-
 import lombok.Getter;
+import net.tangentmc.nmsUtils.entities.NMSArmorStand;
+import net.tangentmc.nmsUtils.utils.FaceUtil;
+import net.tangentmc.nmsUtils.utils.MetadataSaver;
+import net.tangentmc.nmsUtils.utils.V10Block;
+import net.tangentmc.portalStick.PortalStick;
+import net.tangentmc.portalStick.utils.BlockStorage;
 import net.tangentmc.portalStick.utils.GelType;
-import net.tangentmc.portalStick.utils.MetadataSaver;
+import net.tangentmc.portalStick.utils.Util;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -14,27 +16,18 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import lombok.NoArgsConstructor;
-import net.tangentmc.nmsUtils.entities.NMSArmorStand;
-import net.tangentmc.nmsUtils.utils.FaceUtil;
-import net.tangentmc.nmsUtils.utils.V10Block;
-import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.utils.MetadataSaver.Metadata;
-import net.tangentmc.portalStick.utils.BlockStorage;
-import net.tangentmc.portalStick.utils.Util;
-@NoArgsConstructor
-@Metadata(metadataName = "gelTubeobj")
-public class GelTube extends BukkitRunnable implements MetadataSaver {
+import java.util.*;
+
+public class GelTube extends BukkitRunnable {
 	Block dispBlock;
 	BlockFace direction;
     @Getter
 	GelType type;
 	boolean run = true;
+	Set<ArmorStand> spawnedGel = new HashSet<>();
 	private static final Material[] gelBlacklist = new Material[] {
 			Material.ANVIL,
 			Material.STAINED_GLASS_PANE,
@@ -113,20 +106,16 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
         as.setMarker(true);
         as.setRemoveWhenFarAway(false);
 		as.setHelmet(type.randomBlob());
-		as.setMetadata(getMetadataName(), new FixedMetadataValue(PortalStick.getInstance(),this));
-		as.setMetadata("sizeY", new FixedMetadataValue(PortalStick.getInstance(),0));
 		NMSArmorStand.wrap(as).setCollides(true);
 		NMSArmorStand.wrap(as).setWillSave(false);
+		new Gel(as);
+		spawnedGel.add(as);
 
 	}
 	public void stop() {
 		this.cancel();
 		changedBlocks.values().forEach(BlockStorage::set);
-        dispBlock.getWorld().getEntities().stream().filter(en -> Util.getInstance(this.getClass(), en) == this).forEach(Entity::remove);
-	}
-	@Override
-	public String getMetadataName() {
-		return "gelTubeobj";
+        spawnedGel.stream().filter(Entity::isValid).forEach(Entity::remove);
 	}
 	HashMap<V10Block,BlockStorage> changedBlocks = new HashMap<>();
 	public void groundCollide(Block ground) {
@@ -134,11 +123,11 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
         //Water washes paint away
         if (type == GelType.WATER) {
             for (Entity en: dispBlock.getWorld().getEntities()) {
-                GelTube t = Util.getInstance(this.getClass(),en);
+                Gel t = MetadataSaver.get(en,Gel.class);
                 if (t != null) {
-                    if (t.changedBlocks.containsKey(new V10Block(ground))) {
-                        t.changedBlocks.get(new V10Block(ground)).set();
-                        t.changedBlocks.remove(new V10Block(ground));
+                    if (t.getTube().changedBlocks.containsKey(new V10Block(ground))) {
+                        t.getTube().changedBlocks.get(new V10Block(ground)).set();
+                        t.getTube().changedBlocks.remove(new V10Block(ground));
                     }
                 }
             }
@@ -148,7 +137,6 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
             ground = ground.getRelative(BlockFace.DOWN);
         }
         if (ground.getType() == Material.SMOOTH_STAIRS) return;
-		if (Util.retrieveMetadata(ground, 1, Laser.class) != null) return;
 		//We dont want to change the dispenser itself (in the case of dispensers facing upwards)
 		if (new V10Block(ground).equals(new V10Block(this.dispBlock))) return;
 		if (changedBlocks.containsKey(new V10Block(ground))) return;
@@ -156,5 +144,14 @@ public class GelTube extends BukkitRunnable implements MetadataSaver {
 		changedBlocks.put(new V10Block(ground),new BlockStorage(ground));
 		ground.setType(type.getGround().getType());
 		ground.setData(type.getGround().getData().getData());
+	}
+
+	@MetadataSaver.Metadata(metadataName = "gelTubeobj")
+	public class Gel extends MetadataSaver {
+		@Getter
+		GelTube tube = GelTube.this;
+		protected Gel(Entity en) {
+			initMetadata(en);
+		}
 	}
 }

@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import net.tangentmc.nmsUtils.utils.FaceUtil;
+import net.tangentmc.nmsUtils.utils.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -18,7 +18,6 @@ import org.bukkit.block.Sign;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -30,9 +29,6 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
 
 import lombok.SneakyThrows;
-import net.tangentmc.nmsUtils.utils.Utils;
-import net.tangentmc.nmsUtils.utils.V10Block;
-import net.tangentmc.nmsUtils.utils.VelocityUtil;
 import net.tangentmc.portalStick.PortalStick;
 import net.tangentmc.portalStick.utils.Config.Sound;
 
@@ -348,10 +344,6 @@ public class Util {
 	@SneakyThrows
 	public static <T extends MetadataSaver> T getInstance(Class<T> clazz, Entity en) {
 		return MetadataSaver.get(en,clazz);
-	}
-	@SneakyThrows
-	public static <T extends MetadataSaver> T getInstance(String name, Entity en) {
-		return MetadataSaver.get(en,name);
 	}
 	public static boolean isTranslucent(Material mt) {
 		return mt.name().contains("GLASS") || !mt.isSolid() || mt.isTransparent();
