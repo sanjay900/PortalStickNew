@@ -16,8 +16,11 @@ import net.tangentmc.nmsUtils.utils.MathUtil;
 import net.tangentmc.nmsUtils.utils.MetadataSaver;
 import net.tangentmc.nmsUtils.utils.V10Block;
 import net.tangentmc.portalStick.PortalStick;
-import net.tangentmc.portalStick.utils.*;
+import net.tangentmc.portalStick.utils.BlockStorage;
 import net.tangentmc.portalStick.utils.Config.Sound;
+import net.tangentmc.portalStick.utils.RegionSetting;
+import net.tangentmc.portalStick.utils.Util;
+import net.tangentmc.portalStick.utils.VectorUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -28,7 +31,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Stairs;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
-import org.joml.Quaterniond;
+import org.joml.Matrix3d;
+import org.joml.Matrix4d;
+import org.joml.Vector3d;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -50,8 +55,6 @@ public class Portal {
     boolean primary;
     public ArrayList<Bridge> intersects = new ArrayList<>();
     Vector entDirection = null;
-    private Quaterniond rotation;
-    private Quaterniond rotationOut;
     public int roundToNearest(double original, int interval, int offset) {
         return (int) (Math.round( (original-offset)/interval ) * interval + offset);
     }
@@ -149,8 +152,6 @@ public class Portal {
             PortalStick.getInstance().getPortals().put(new V10Block(bottom), this);
             finished = true;
             double yawRad = Math.toRadians(MathUtil.getLookAtYaw(entDirection)+180);
-            rotation = new Quaterniond().rotationXYZ(facing.getY()>0?Math.PI:0, yawRad,0);
-            rotationOut = new Quaterniond().rotationXYZ(facing.getY()<0?Math.PI:0, yawRad,0);
             System.out.println(yawRad);
 
             System.out.println(facing);
@@ -171,8 +172,6 @@ public class Portal {
         if (!bottom.getType().isSolid()) return;
         PortalStick.getInstance().getPortals().put(new V10Block(bottom), this);
         PortalStick.getInstance().getPortals().put(new V10Block(top), this);
-        rotation = new Quaterniond().lookAlong(VectorUtil.convert(facing),VectorUtil.UP);
-        rotationOut = new Quaterniond().lookAlong(VectorUtil.convert(new Vector(0,0,0).subtract(facing)),VectorUtil.UP);
         finished = true;
     }
     //TODO: check if facing and stair direction are in sync.
@@ -198,21 +197,6 @@ public class Portal {
         PortalStick.getInstance().getPortals().put(new V10Block(top), this);
         this.facing = FaceUtil.faceToVector(stair.getFacing());
         this.facing.setY(stair.isInverted()?-1:1);
-        BlockFace f = FaceUtil.getDirection(facing.clone().setY(0));
-        if (f == BlockFace.EAST) {
-            rotation = new Quaterniond();
-            rotationOut = new Quaterniond().rotationY(Math.PI);
-        } else if (f == BlockFace.WEST) {
-            rotation = new Quaterniond().rotationY(Math.PI);
-            rotationOut = new Quaterniond();
-        } else if (f == BlockFace.NORTH) {
-            rotation = new Quaterniond().rotationY(-Math.PI/2);
-            rotationOut = new Quaterniond().rotationY(Math.PI/2);
-        } else if (f == BlockFace.SOUTH) {
-            rotation = new Quaterniond().rotationY(Math.PI/2);
-            rotationOut = new Quaterniond().rotationY(-Math.PI/2);
-        }
-
         finished = true;
     }
 
@@ -457,21 +441,39 @@ public class Portal {
         Location destination;
         Vector velocity;
     }
-
+    private boolean isVert(Vector v) {
+        return v.getX() == 0 && v.getZ() == 0;
+    }
     public TeleportLoc teleportEntity(Location loc, Vector motion, Entity en) {
         Portal destination = getDestination();
         if (destination == null) return null;
         Vector fromCenter = loc.toVector().subtract(portal.getLocation().add(0,1,0).toVector());
-        Quaterniond q = getRotationInv().mul(destination.getRotation());
+        Matrix3d src = new Matrix3d();
+        if (!isVert(facing)) {
+            src.setLookAlong(VectorUtil.convert(new Vector().subtract(facing)), new Vector3d(0,1,0));
+        } else {
+            System.out.println("Yaw: ");
+            System.out.println(MathUtil.getLookAtYaw(facing));
 
-        Vector outorient = VectorUtil.rotate(q, fromCenter);
-        Vector v = loc.getDirection();
-        Vector facing = VectorUtil.rotate(q, v);
-        Vector outvector = VectorUtil.rotate(q, motion);
-        //TODO: fix outorient and then add it back in.
-        //TODO: WHY IS THIS -y when going from -y to x or z????
-        System.out.println(outvector);
-        System.out.println(motion);
+            src = src.rotate(facing.getY()*Math.PI/2,new Vector3d(1,0,0));
+            src = src.rotate(Math.toRadians(MathUtil.getLookAtYaw(new Vector().subtract(facing))+180F),new Vector3d(0,1,0));
+        }
+        Matrix3d dest = new Matrix3d();
+        if (!isVert(destination.facing)) {
+            dest.setLookAlong(VectorUtil.convert(destination.facing), new Vector3d(0,1,0));
+        }   else {
+            System.out.println("Yaw: ");
+            System.out.println(MathUtil.getLookAtYaw(destination.facing));
+            dest = dest.rotate(facing.getY()*Math.PI/2,new Vector3d(1,0,0));
+            dest = dest.rotate(Math.toRadians(MathUtil.getLookAtYaw(destination.facing)),new Vector3d(0,1,0));
+        }
+        Matrix3d res = src.mul(dest);
+
+        Vector outorient = VectorUtil.convert(VectorUtil.convert(fromCenter).mul(res));
+        Vector v = en.getLocation().getDirection();
+        Vector facing = VectorUtil.convert(VectorUtil.convert(v).mul(res));
+        Vector outvector = VectorUtil.convert(VectorUtil.convert(motion).mul(res));
+//        System.out.println(motion);
         Location teleport = getDestination().portal.getLocation();
         if (destination.getEntDirection() == null) {
             teleport.add(0,0.5,0);
@@ -490,8 +492,9 @@ public class Portal {
             }
         }
         teleport.setDirection(facing);
-        //teleport.add(outorient);
-
+        //TODO: consider fixing this
+//        teleport.add(outorient);
+//
         if ((destination.facing.getX() != 0 || destination.facing.getZ() != 0)) {
             if (destination.facing.getY() == -1) {
                 teleport= teleport.add(0,-0.5,0);
@@ -533,12 +536,6 @@ public class Portal {
 
     public boolean isRegionPortal() {
         return this.owner.startsWith("§region§_");
-    }
-    public Quaterniond getRotation() {
-        return new Quaterniond(rotation);
-    }
-    public Quaterniond getRotationInv() {
-        return new Quaterniond(rotationOut);
     }
     public boolean isAngled() {
         return (facing.getX() != 0 || facing.getZ() != 0) && facing.getY() == 1;

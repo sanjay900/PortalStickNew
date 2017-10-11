@@ -3,6 +3,7 @@ package net.tangentmc.portalStick.utils;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -25,7 +26,7 @@ public class I18n
 	YamlConfiguration yml = new YamlConfiguration();
 	try
 	{
-	  yml.load(getClass().getResourceAsStream("/lang/en_US.txt"));
+	  yml.load(new InputStreamReader(getClass().getResourceAsStream("/lang/en_US.txt")));
 	}
 	catch(Exception e)
 	{
@@ -62,7 +63,7 @@ public class I18n
 		f = new File(ld, en);
 		if(f.exists()) {
 		    tmpIn = new YamlConfiguration();
-		    tmpIn.load(getClass().getResourceAsStream("/lang/"+en));
+		    tmpIn.load(new InputStreamReader(getClass().getResourceAsStream("/lang/"+en)));
 		    tmpOut = new YamlConfiguration();
 		    tmpOut.load(f);
 		    changed = false;

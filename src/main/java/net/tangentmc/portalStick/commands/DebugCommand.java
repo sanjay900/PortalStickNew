@@ -1,15 +1,8 @@
 package net.tangentmc.portalStick.commands;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
 import net.tangentmc.nmsUtils.utils.Utils;
 import net.tangentmc.portalStick.PortalStick;
-import org.bukkit.entity.Boat;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-
-import java.lang.reflect.InvocationTargetException;
 
 public class DebugCommand extends BaseCommand {
     public DebugCommand() {

@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/PortalStickNew.iml" filepath="$PROJECT_DIR$/PortalStickNew.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/PortalStickNew_main.iml" filepath="$PROJECT_DIR$/.idea/modules/PortalStickNew_main.iml" group="PortalStickNew" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/PortalStickNew_test.iml" filepath="$PROJECT_DIR$/.idea/modules/PortalStickNew_test.iml" group="PortalStickNew" />
     </modules>
   </component>
 </project>

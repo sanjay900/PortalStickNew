@@ -2,20 +2,14 @@
 package net.tangentmc.portalStick.utils;
 
 
-import com.comphenix.protocol.events.PacketContainer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
-import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
-import java.util.Arrays;
 import java.util.Collections;
 
 public class VectorUtil {
-    public static Vector rotate(Quaterniond q, Vector origin) {
-        return convert(q.transform(convert(origin)));
-    }
     public static Vector3d convert(Vector v) {
         return new Vector3d(v.getX(),v.getY(),v.getZ());
     }
@@ -57,5 +51,4 @@ public class VectorUtil {
         }
         return target;
     }
-    public static final Vector3d UP = new Vector3d(0,1,0);
 }
