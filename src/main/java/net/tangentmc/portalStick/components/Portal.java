@@ -55,7 +55,7 @@ public class Portal {
     boolean primary;
     public ArrayList<Bridge> intersects = new ArrayList<>();
     Vector entDirection = null;
-    private Matrix3d inwards = null, outwards = null;
+    private Quaterniond inwards = null, outwards = null;
     public int roundToNearest(double original, int interval, int offset) {
         return (int) (Math.round( (original-offset)/interval ) * interval + offset);
     }
@@ -173,32 +173,18 @@ public class Portal {
     }
 
     private void calculateMatrices() {
-        inwards = new Matrix3d();
-        outwards = new Matrix3d();
-        //If a portal isnt vertical, we can just tell the matrix to apply a rotation that looks along the portal
+        inwards = new Quaterniond();
+        outwards = new Quaterniond();
+        //If a portal is vertical, we have to consider the fact that the portal has a rotation. Apply it to the quaternion.
+        //Note: since we are using -z = initial, we need to sub 180 as minecraft uses +z as its initial.
         if (isVert(facing)) {
-            //Apply the same rotation that the stand has
-            inwards = inwards.rotation(Math.toRadians(portal.getLocation().getYaw()),new Vector3d(0,1,0));
-            outwards = outwards.rotation(Math.toRadians(portal.getLocation().getYaw()),new Vector3d(0,1,0));
-            //Add a 180 degree rotation if the entity would be going into the portal up (aka the portal is facing down)
-            if (facing.getY() < 0)
-                inwards = inwards.rotate(Math.PI, new Vector3d(1, 0, 0));
-            if (facing.getY() > 0)
-                outwards = outwards.rotate(Math.PI, new Vector3d(1, 0, 0));
-            //Somethings a bit off with the math somewhere, as a 90 degree rotation is required when going from vert -> non vert.
-            if (!isVert(getDestination().facing)) {
-                inwards = inwards.rotate(Math.PI/2, new Vector3d(1, 0, 0));
-                outwards = outwards.rotate(Math.PI/2, new Vector3d(1, 0, 0));
-            }
-
-        } else {
-            System.out.println(facing);
-            //If a portal isnt vertical, we can just tell the matrix to apply a rotation that looks along the portal
-            inwards.setLookAlong(VectorUtil.convert(new Vector().subtract(facing)), new Vector3d(0,1,0));
-            outwards.setLookAlong(VectorUtil.convert(facing), new Vector3d(0,1,0));
-            System.out.println("in: \n"+inwards);
-            System.out.println("out: \n"+inwards);
+            inwards.rotateAxis(Math.toRadians(portal.getLocation().getYaw() - 180),new Vector3d(0,facing.getY(),0));
+            outwards.rotateAxis(Math.toRadians(portal.getLocation().getYaw() - 180),new Vector3d(0,-facing.getY(),0));
         }
+        //Now combine the above rotation (if it exists) with a rotation that converts from facing to the initial -z axis.
+        inwards.rotateTo(VectorUtil.convert(new Vector().subtract(facing)), new Vector3d(0, 0, -1));
+        outwards.rotateTo(new Vector3d(0,0,-1),VectorUtil.convert(facing));
+        //Note: the above comments are for inwards. outwards literally does the exact same thing in reverse.
     }
 
     //TODO: check if facing and stair direction are in sync.
@@ -420,6 +406,7 @@ public class Portal {
         if (getDestination() != null && getDestination().disabledFor.contains(entity.getUniqueId())) {
             return;
         }
+
         if (facing.getX() != 0 || facing.getZ() != 0) {
             if (entity.getLocation().getBlockY() > getTop().getY()) return;
         }
@@ -476,17 +463,14 @@ public class Portal {
         Portal destination = getDestination();
         if (destination == null) return null;
         Vector fromCenter = loc.toVector().subtract(portal.getLocation().add(0,1,0).toVector());
-        destination.calculateMatrices();
         //Combine the rotation of the rotation to make something face into this portal, and out of the other one
         //Essentially, calculate the rotation to rotate something between src and dest
-        Matrix3d res = inwards.mul(destination.outwards, new Matrix3d());
-        System.out.println("\n"+destination.outwards);
-        System.out.println(new Vector3d(0,-1,0).mul(destination.outwards));
+        Quaterniond res = destination.outwards.mul(inwards, new Quaterniond());
         //Now apply that rotation to everything
-        Vector outorient = VectorUtil.convert(VectorUtil.convert(fromCenter).mul(res));
+        Vector outorient = VectorUtil.convert(destination.outwards.transform(inwards.transform(VectorUtil.convert(fromCenter))));
         Vector v = en.getLocation().getDirection();
-        Vector facing = VectorUtil.convert(VectorUtil.convert(v).mul(res));
-        Vector outvector = VectorUtil.convert(VectorUtil.convert(motion).mul(res));
+        Vector facing = VectorUtil.convert(destination.outwards.transform(inwards.transform(VectorUtil.convert(v))));
+        Vector outvector = VectorUtil.convert(destination.outwards.transform(inwards.transform(VectorUtil.convert(motion))));
         Location teleport = getDestination().portal.getLocation();
         if (destination.getEntDirection() == null) {
             teleport.add(0,0.5,0);
