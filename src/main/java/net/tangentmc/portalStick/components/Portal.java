@@ -459,18 +459,29 @@ public class Portal {
     private boolean isVert(Vector v) {
         return v.getX() == 0 && v.getZ() == 0;
     }
+
+    /**
+     * Apply the transformation of both the incoming transformation from this portal, and the outgoing transformation from the destination portal
+     * @param orig the original vector to tranform
+     * @return the vector rotated so that it appears to have gone through the portal
+     */
+    private Vector transform(Vector orig) {
+        Portal destination = getDestination();
+        if (destination == null) return null;
+        //First, transform the vector so that it is a change from the portal, starting at -Z
+        //Second, apply that change to the outgoing portal
+        //Multiplying both transformations together is actually wrong as it results in some rotations that would not be possible because we don't have a roll.
+        return VectorUtil.convert(destination.outwards.transform(inwards.transform(VectorUtil.convert(orig))));
+    }
     public TeleportLoc teleportEntity(Location loc, Vector motion, Entity en) {
         Portal destination = getDestination();
         if (destination == null) return null;
         Vector fromCenter = loc.toVector().subtract(portal.getLocation().add(0,1,0).toVector());
-        //Combine the rotation of the rotation to make something face into this portal, and out of the other one
-        //Essentially, calculate the rotation to rotate something between src and dest
-        Quaterniond res = destination.outwards.mul(inwards, new Quaterniond());
         //Now apply that rotation to everything
-        Vector outorient = VectorUtil.convert(destination.outwards.transform(inwards.transform(VectorUtil.convert(fromCenter))));
+        Vector outorient = transform(fromCenter);
         Vector v = en.getLocation().getDirection();
-        Vector facing = VectorUtil.convert(destination.outwards.transform(inwards.transform(VectorUtil.convert(v))));
-        Vector outvector = VectorUtil.convert(destination.outwards.transform(inwards.transform(VectorUtil.convert(motion))));
+        Vector facing =transform(v);
+        Vector outvector = transform(motion);
         Location teleport = getDestination().portal.getLocation();
         if (destination.getEntDirection() == null) {
             teleport.add(0,0.5,0);
